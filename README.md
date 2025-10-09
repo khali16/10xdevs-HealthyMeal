@@ -1,3 +1,90 @@
+### HealthyMeal
+
+Modern web app that helps users adapt recipes to individual dietary needs with AI assistance. The MVP focuses on private recipe CRUD, a quick dietary preferences profile, and a single "Adjust Recipe" AI action with diff preview and post-AI safety validation.
+
+![Node](https://img.shields.io/badge/node-22.14.0-43853d?logo=node.js&logoColor=white)
+![Astro](https://img.shields.io/badge/Astro-5-BC52EE?logo=astro)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=06142A)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
+
+---
+
+### Table of Contents
+
+- [Project name](#healthymeal)
+- [Project description](#project-description)
+- [Tech stack](#tech-stack)
+- [Getting started locally](#getting-started-locally)
+- [Available scripts](#available-scripts)
+- [Project scope](#project-scope)
+- [Project status](#project-status)
+- [License](#license)
+
+### Project description
+
+HealthyMeal is a responsive web app that structures pasted recipes, normalizes units, and lets users apply a single AI-powered "Adjust Recipe" action tailored to their dietary profile (allergens, exclusions, macro/calorie goals).
+
+Key MVP highlights:
+
+- Private recipe CRUD with sorting (Newest, Favorites, Highest Rated) and tie-breaker by updatedAt.
+- Onboarding for dietary preferences (EU 14 allergens, exclusions, diet). Optional calories/servings.
+- Single AI action with diff preview, legal disclaimer, rate limits, retries, and clear error statuses.
+- Post-AI validation for the 14 EU allergens with synonyms/compound ingredients and soft blocks on uncertainty.
+- Portions scaler with rounding rules and "do not scale" flag per ingredient.
+- Minimal analytics and logging for key events (authentication and AI actions).
+
+Further details: see the PRD at `./.ai/prd.md`.
+
+### Tech stack
+
+- **Frontend**: Astro 5, React 19, TypeScript 5, Tailwind CSS 4, shadcn/ui
+- **Core libraries**: `@astrojs/react`, `@astrojs/node`, `@tailwindcss/vite`, `lucide-react`, `class-variance-authority`, `clsx`, `tailwind-merge`, `tw-animate-css`
+- **Backend**: Supabase (PostgreSQL, auth, and SDK)
+- **AI**: OpenRouter.ai (access to multiple model providers with budget controls)
+- **CI/CD & Hosting**: GitHub Actions (CI/CD), DigitalOcean (Docker image hosting)
+- **Tooling**: ESLint, Prettier, TypeScript, Husky + lint-staged
+
+Reference: `./.ai/tech-stack.md`
+
+Notes:
+
+- Recommended browsers: Chrome, Safari, Edge.
+- When backend and AI integrations are wired in, typical environment variables will include Supabase and OpenRouter credentials (to be documented alongside integration).
+
+### Project scope
+
+In scope (MVP):
+
+- Accounts and preferences profile with quick onboarding (≤60s) and soft gate.
+- Private text-based recipe CRUD; owner-only visibility.
+- Single AI action "Adjust Recipe" with diff preview and safety validation.
+- "Structure" step with confidence indicators and unit normalization to g/ml/unit.
+- Quick list filters and presets; ratings and favorites; servings scaler.
+- Admin panel for allergens/synonyms dictionary (role + feature flag) with audit log.
+
+Out of scope (for MVP):
+
+- Recipe import from URL.
+- Extended media support (photos, video).
+- Social/sharing features.
+- Recipe versioning.
+
+Assumptions & dependencies (selected):
+
+- Availability and budget for the chosen AI model/provider.
+- Unified JSON contract for the "Structure" step (confidence, fields, validations).
+- Browser support: Chrome, Safari, Edge.
+
+For the full scope and user stories, see `./.ai/prd.md`.
+
+### Project status
+
+MVP in active development. Core flows to deliver: authentication and onboarding, private recipe CRUD, AI "Adjust Recipe" with post-AI validation, and essential analytics/logging. Not yet production-ready.
+
+### License
+
+TBD. This repository does not currently specify a license. Add a `LICENSE` file to define usage terms.
+
 # 10x Astro Starter
 
 A modern, opinionated starter template for building fast, accessible, and AI-friendly web applications.
@@ -54,12 +141,12 @@ npm run build
 ```md
 .
 ├── src/
-│   ├── layouts/    # Astro layouts
-│   ├── pages/      # Astro pages
-│   │   └── api/    # API endpoints
-│   ├── components/ # UI components (Astro & React)
-│   └── assets/     # Static assets
-├── public/         # Public assets
+│ ├── layouts/ # Astro layouts
+│ ├── pages/ # Astro pages
+│ │ └── api/ # API endpoints
+│ ├── components/ # UI components (Astro & React)
+│ └── assets/ # Static assets
+├── public/ # Public assets
 ```
 
 ## AI Development Support
