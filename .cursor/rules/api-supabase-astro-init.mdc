@@ -1,8 +1,3 @@
----
-description: 
-globs: 
-alwaysApply: false
----
 # Supabase Astro Initialization
 
 This document provides a reproducible guide to create the necessary file structure for integrating Supabase with your Astro project.

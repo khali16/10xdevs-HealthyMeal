@@ -81,6 +81,28 @@ For the full scope and user stories, see `./.ai/prd.md`.
 
 MVP in active development. Core flows to deliver: authentication and onboarding, private recipe CRUD, AI "Adjust Recipe" with post-AI validation, and essential analytics/logging. Not yet production-ready.
 
+### API Quickstart
+
+POST /api/recipes (uses DEFAULT_USER_ID for now)
+
+```bash
+curl -X POST http://localhost:3000/api/recipes \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "title": "Tofu Stir Fry",
+    "ingredients": [{ "text": "200 g tofu", "unit": "g", "amount": 200 }],
+    "steps": ["Press tofu", "Stir fry"],
+    "tags": { "diet": "vegan" },
+    "prep_time_minutes": 10,
+    "cook_time_minutes": 15,
+    "servings": 2
+  }'
+```
+
+Notes:
+- Configure `SUPABASE_URL`, `SUPABASE_KEY`, and optionally `SUPABASE_DEFAULT_USER_ID` in your env. If the default is missing, the endpoint returns 500.
+- Body size is limited (~256KB) and basic rate limiting applies (middleware).
+
 ### License
 
 TBD. This repository does not currently specify a license. Add a `LICENSE` file to define usage terms.
