@@ -35,7 +35,16 @@ export async function createRecipe(
     .select('*')
     .single()
 
-  if (error) throw mapDbError(error)
+  if (error) {
+    // Improve error message for foreign key violations
+    const mappedError = mapDbError(error)
+    if ((mappedError as any).code === 'DB_FOREIGN_KEY') {
+      const err = new Error(`User with ID ${userId} does not exist in public.users table. Please ensure the user exists in the users table.`)
+      ;(err as any).code = 'DB_FOREIGN_KEY'
+      throw err
+    }
+    throw mappedError
+  }
 
   return mapRecipeRowToDTO(data)
 }
@@ -90,6 +99,53 @@ function mapDbError(error: unknown): Error {
   }
 }
 
+/**
+ * Fetches ratings and favorites for a list of recipe IDs for a specific user.
+ * Returns maps keyed by recipe_id for efficient lookup.
+ */
+async function fetchRatingsAndFavorites(
+  supabase: SupabaseClient,
+  userId: string,
+  recipeIds: string[],
+): Promise<{
+  ratings: Map<string, number>
+  favorites: Set<string>
+}> {
+  if (recipeIds.length === 0) {
+    return { ratings: new Map(), favorites: new Set() }
+  }
+
+  // Fetch ratings
+  const { data: ratingsData, error: ratingsError } = await supabase
+    .from('recipe_ratings')
+    .select('recipe_id, rating')
+    .eq('user_id', userId)
+    .in('recipe_id', recipeIds)
+
+  if (ratingsError) throw mapDbError(ratingsError)
+
+  const ratings = new Map<string, number>()
+  for (const r of ratingsData ?? []) {
+    ratings.set(r.recipe_id, r.rating)
+  }
+
+  // Fetch favorites
+  const { data: favoritesData, error: favoritesError } = await supabase
+    .from('recipe_favorites')
+    .select('recipe_id')
+    .eq('user_id', userId)
+    .in('recipe_id', recipeIds)
+
+  if (favoritesError) throw mapDbError(favoritesError)
+
+  const favorites = new Set<string>()
+  for (const f of favoritesData ?? []) {
+    favorites.add(f.recipe_id)
+  }
+
+  return { ratings, favorites }
+}
+
 export async function listRecipes(
   supabase: SupabaseClient,
   userId: string,
@@ -103,11 +159,26 @@ export async function listRecipes(
     .from('recipes')
     .select('*', { count: 'exact' })
     .eq('user_id', userId)
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .range(from, to)
 
   if (error) throw mapDbError(error)
-  const items = (data ?? []).map((r) => mapRecipeRowToDTO(r as unknown as RecipeRow))
+
+  const recipeRows = (data ?? []) as unknown as RecipeRow[]
+  const recipeIds = recipeRows.map((r) => r.id)
+
+  // Fetch ratings and favorites for all recipes
+  const { ratings, favorites } = await fetchRatingsAndFavorites(supabase, userId, recipeIds)
+
+  // Map recipes to DTOs with ratings and favorites
+  const items = recipeRows.map((r) => {
+    const dto = mapRecipeRowToDTO(r)
+    dto.rating = ratings.get(r.id) ?? null
+    dto.is_favorite = favorites.has(r.id)
+    return dto
+  })
+
   return { items, total: count ?? items.length }
 }
 
@@ -121,11 +192,21 @@ export async function getRecipeById(
     .select('*')
     .eq('user_id', userId)
     .eq('id', id)
+    .is('deleted_at', null)
     .maybeSingle()
 
   if (error) throw mapDbError(error)
   if (!data) return null
-  return mapRecipeRowToDTO(data as unknown as RecipeRow)
+
+  const recipeRow = data as unknown as RecipeRow
+  const dto = mapRecipeRowToDTO(recipeRow)
+
+  // Fetch rating and favorite for this recipe
+  const { ratings, favorites } = await fetchRatingsAndFavorites(supabase, userId, [id])
+  dto.rating = ratings.get(id) ?? null
+  dto.is_favorite = favorites.has(id)
+
+  return dto
 }
 
 

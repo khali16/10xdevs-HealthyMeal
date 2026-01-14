@@ -1,0 +1,212 @@
+import type { APIRoute } from 'astro';
+import { DEFAULT_USER_ID } from '@/db/supabase.client';
+import {
+  listAllergens,
+  createAllergen,
+  type ListAllergensFilters,
+  type PaginationParams,
+  type SortParams,
+} from '@/lib/services/allergens.service';
+import {
+  createAllergenCommandSchema,
+  listAllergensQuerySchema,
+} from '@/lib/validation/allergens';
+import type { ApiError, ApiListSuccess, ApiSuccess } from '@/types';
+
+export const prerender = false;
+
+/**
+ * GET /api/admin/allergens
+ * Lists allergen dictionary entries with filtering, pagination, and sorting.
+ */
+export const GET: APIRoute = async ({ url, locals }) => {
+  const userId = DEFAULT_USER_ID;
+  if (!userId || userId === '00000000-0000-0000-0000-000000000000') {
+    return new Response(
+      JSON.stringify({
+        error: { code: 'INTERNAL', message: 'Missing DEFAULT_USER_ID' },
+      } as ApiError),
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  // Parse and validate query parameters
+  const queryParams: Record<string, string> = {};
+  url.searchParams.forEach((value, key) => {
+    queryParams[key] = value;
+  });
+
+  const parsed = listAllergensQuerySchema.safeParse(queryParams);
+  if (!parsed.success) {
+    return new Response(
+      JSON.stringify({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Validation failed',
+          fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+        },
+      } as ApiError),
+      { status: 422, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  try {
+    const filters: ListAllergensFilters = {};
+    if (parsed.data.is_active !== undefined) {
+      filters.is_active = parsed.data.is_active;
+    }
+    if (parsed.data.q) {
+      filters.q = parsed.data.q;
+    }
+
+    const pagination: PaginationParams = {
+      page: parsed.data.page,
+      pageSize: parsed.data.page_size,
+    };
+
+    const sort: SortParams = {
+      sort: parsed.data.sort,
+      order: parsed.data.order,
+    };
+
+    const { items, total } = await listAllergens(
+      locals.supabase,
+      filters,
+      pagination,
+      sort,
+    );
+
+    const hasNext = pagination.page * pagination.pageSize < total;
+    const meta = {
+      page: pagination.page,
+      page_size: pagination.pageSize,
+      total,
+      has_next: hasNext,
+    };
+
+    const response: ApiListSuccess<typeof items[0]> = {
+      data: items,
+      meta,
+    };
+
+    return new Response(JSON.stringify(response), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'private, max-age=30',
+      },
+    });
+  } catch (e: unknown) {
+    console.error('List allergens failed', { error: e, operation: 'GET' });
+
+    const error = e as { code?: string };
+    if (error.code === 'DB_CONFLICT') {
+      return new Response(
+        JSON.stringify({
+          error: { code: 'CONFLICT', message: 'Database conflict' },
+        } as ApiError),
+        { status: 409, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        error: { code: 'INTERNAL_SERVER_ERROR', message: 'An unexpected error occurred' },
+      } as ApiError),
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+};
+
+/**
+ * POST /api/admin/allergens
+ * Creates a new allergen dictionary entry with automatic audit logging.
+ */
+export const POST: APIRoute = async ({ request, locals }) => {
+  const userId = DEFAULT_USER_ID;
+  if (!userId || userId === '00000000-0000-0000-0000-000000000000') {
+    return new Response(
+      JSON.stringify({
+        error: { code: 'INTERNAL', message: 'Missing DEFAULT_USER_ID' },
+      } as ApiError),
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  let payload: unknown;
+  try {
+    payload = await request.json();
+  } catch {
+    return new Response(
+      JSON.stringify({
+        error: { code: 'BAD_REQUEST', message: 'Invalid JSON' },
+      } as ApiError),
+      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  const parsed = createAllergenCommandSchema.safeParse(payload);
+  if (!parsed.success) {
+    return new Response(
+      JSON.stringify({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Validation failed',
+          fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+        },
+      } as ApiError),
+      { status: 422, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  try {
+    const dto = await createAllergen(locals.supabase, userId, parsed.data);
+
+    const response: ApiSuccess<typeof dto> = {
+      data: dto,
+    };
+
+    return new Response(JSON.stringify(response), {
+      status: 201,
+      headers: {
+        'Content-Type': 'application/json',
+        Location: `/api/admin/allergens/${dto.id}`,
+      },
+    });
+  } catch (e: unknown) {
+    console.error('Create allergen failed', { error: e, userId, operation: 'POST' });
+
+    const error = e as { code?: string };
+    if (error.code === 'DUPLICATE_ALLERGEN_NAME') {
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: 'DUPLICATE_ALLERGEN_NAME',
+            message: 'Allergen with this name already exists',
+          },
+        } as ApiError),
+        { status: 409, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
+    if (error.code === 'DB_CONFLICT') {
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: 'DUPLICATE_ALLERGEN_NAME',
+            message: 'Allergen with this name already exists',
+          },
+        } as ApiError),
+        { status: 409, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        error: { code: 'INTERNAL_SERVER_ERROR', message: 'An unexpected error occurred' },
+      } as ApiError),
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+};
+
