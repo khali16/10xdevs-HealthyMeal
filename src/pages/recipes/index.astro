@@ -1,0 +1,11 @@
+---
+import Layout from '@/layouts/Layout.astro'
+import RecipesListPage from '@/components/recipes/RecipesListPage'
+---
+
+<Layout title="Przepisy">
+  <main class="min-h-screen bg-background text-foreground">
+    <RecipesListPage client:load />
+  </main>
+</Layout>
+

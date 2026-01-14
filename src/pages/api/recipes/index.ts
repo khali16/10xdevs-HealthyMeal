@@ -161,8 +161,31 @@ export const POST: APIRoute = async (context) => {
 }
 
 export const GET: APIRoute = async (context) => {
-  const supabase = context.locals.supabase
-  const userId = DEFAULT_USER_ID
+  // Try to get authenticated user from JWT token
+  let supabase = context.locals.supabase
+  let userId: string | null = null
+
+  const authHeader = context.request.headers.get('Authorization')
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7)
+    const { data: { user }, error } = await supabaseClient.auth.getUser(token)
+
+    if (!error && user) {
+      userId = user.id
+      supabase = supabaseClient
+    } else {
+      return new Response(
+        JSON.stringify(<ApiError>{
+          error: { code: 'UNAUTHORIZED', message: 'Invalid or expired token' },
+        }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } },
+      )
+    }
+  } else {
+    // No auth header - use service role to bypass RLS for development
+    supabase = getSupabaseServiceRoleClient()
+    userId = DEFAULT_USER_ID
+  }
 
   if (!userId || userId === '00000000-0000-0000-0000-000000000000') {
     return new Response(
