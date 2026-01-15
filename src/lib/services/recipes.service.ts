@@ -180,7 +180,7 @@ export async function listRecipes(
   })
 
   return { items, total: count ?? items.length }
-}
+} 
 
 export async function getRecipeById(
   supabase: SupabaseClient,

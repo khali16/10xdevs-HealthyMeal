@@ -136,6 +136,10 @@ const RecipesListPage: React.FC = () => {
     setQuery({ page })
   }
 
+  const handleOpenRecipe = (id: string) => {
+    window.location.assign(`/recipes/${id}`)
+  }
+
   return (
     <section className="min-h-screen bg-background">
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 sm:px-6 lg:px-8">
@@ -149,7 +153,11 @@ const RecipesListPage: React.FC = () => {
         {viewState.status === 'empty' && <RecipesEmptyState />}
 
         {(viewState.status === 'ready' || viewState.status === 'loading' || viewState.status === 'error') && (
-          <RecipesGrid items={viewState.items} isLoading={isFetching || viewState.status === 'loading'} />
+          <RecipesGrid
+            items={viewState.items}
+            isLoading={isFetching || viewState.status === 'loading'}
+            onOpenRecipe={handleOpenRecipe}
+          />
         )}
 
         {viewState.meta && (

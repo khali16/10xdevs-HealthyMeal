@@ -1,7 +1,18 @@
-import type { ApiError, ApiListMeta, RecipeDTO } from '@/types'
+import type {
+  ApiError,
+  ApiListMeta,
+  PutRecipeFavoriteCommand,
+  PutRecipeRatingCommand,
+  RecipeDTO,
+  RecipeFavoriteDTO,
+  RecipeRatingDTO,
+} from '@/types'
 import type { RecipesListQuery } from '@/components/recipes/types'
 
 type RecipesListResponse = { data: RecipeDTO[]; meta: ApiListMeta }
+type RecipeResponse = { data: RecipeDTO }
+type RecipeRatingResponse = { data: RecipeRatingDTO }
+type RecipeFavoriteResponse = { data: RecipeFavoriteDTO }
 
 export type ApiMappedError = { code?: string; message: string }
 
@@ -36,6 +47,151 @@ export async function listRecipes(
   }
 
   return typed
+}
+
+export async function getRecipeById(
+  id: string,
+  signal?: AbortSignal,
+): Promise<RecipeResponse> {
+  const res = await fetch(`/api/recipes/${id}`, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+    signal,
+  })
+
+  let payload: unknown
+  try {
+    payload = await res.json()
+  } catch {
+    throw DEFAULT_ERROR
+  }
+
+  if (!res.ok) {
+    let err = mapApiError(payload)
+    if (res.status === 404) {
+      err = { ...err, code: err.code ?? 'NOT_FOUND' }
+    }
+    throw err
+  }
+
+  const typed = payload as RecipeResponse
+  if (!typed?.data) {
+    throw DEFAULT_ERROR
+  }
+
+  return typed
+}
+
+export async function putRecipeRating(
+  id: string,
+  cmd: PutRecipeRatingCommand,
+): Promise<RecipeRatingResponse> {
+  const res = await fetch(`/api/recipes/${id}/rating`, {
+    method: 'PUT',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify(cmd),
+  })
+
+  let payload: unknown
+  try {
+    payload = await res.json()
+  } catch {
+    throw DEFAULT_ERROR
+  }
+
+  if (!res.ok) {
+    let err = mapApiError(payload)
+    if (res.status === 404) {
+      err = { ...err, code: err.code ?? 'NOT_FOUND' }
+    }
+    throw err
+  }
+
+  const typed = payload as RecipeRatingResponse
+  if (!typed?.data) {
+    throw DEFAULT_ERROR
+  }
+
+  return typed
+}
+
+export async function deleteRecipeRating(id: string): Promise<void> {
+  const res = await fetch(`/api/recipes/${id}/rating`, {
+    method: 'DELETE',
+    headers: { Accept: 'application/json' },
+  })
+
+  if (res.ok) return
+
+  let payload: unknown
+  try {
+    payload = await res.json()
+  } catch {
+    throw DEFAULT_ERROR
+  }
+
+  let err = mapApiError(payload)
+  if (res.status === 404) {
+    err = { ...err, code: err.code ?? 'NOT_FOUND' }
+  }
+  throw err
+}
+
+export async function putRecipeFavorite(
+  id: string,
+  cmd: PutRecipeFavoriteCommand,
+): Promise<RecipeFavoriteResponse> {
+  const res = await fetch(`/api/recipes/${id}/favorite`, {
+    method: 'PUT',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify(cmd),
+  })
+
+  let payload: unknown
+  try {
+    payload = await res.json()
+  } catch {
+    throw DEFAULT_ERROR
+  }
+
+  if (!res.ok) {
+    let err = mapApiError(payload)
+    if (res.status === 404) {
+      err = { ...err, code: err.code ?? 'NOT_FOUND' }
+    }
+    throw err
+  }
+
+  const typed = payload as RecipeFavoriteResponse
+  if (!typed?.data) {
+    throw DEFAULT_ERROR
+  }
+
+  return typed
+}
+
+export async function deleteRecipe(id: string): Promise<void> {
+  const res = await fetch(`/api/recipes/${id}`, {
+    method: 'DELETE',
+    headers: { Accept: 'application/json' },
+  })
+
+  if (res.ok) return
+
+  let payload: unknown
+  try {
+    payload = await res.json()
+  } catch {
+    throw DEFAULT_ERROR
+  }
+
+  let err = mapApiError(payload)
+  if (res.status === 404) {
+    err = { ...err, code: err.code ?? 'NOT_FOUND' }
+  } else if (res.status === 405) {
+    err = { ...err, code: err.code ?? 'METHOD_NOT_ALLOWED' }
+  }
+  throw err
 }
 
 function buildRecipesQueryString(query: RecipesListQuery): string {

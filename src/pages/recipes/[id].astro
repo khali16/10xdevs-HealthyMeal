@@ -1,0 +1,13 @@
+---
+import Layout from '@/layouts/Layout.astro'
+import RecipeDetailsPage from '@/components/recipes-details/RecipeDetailsPage'
+
+const { id } = Astro.params
+---
+
+<Layout title="Szczegóły przepisu">
+  <main class="min-h-screen bg-background text-foreground">
+    <RecipeDetailsPage recipeId={id ?? ''} client:load />
+  </main>
+</Layout>
+
