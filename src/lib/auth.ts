@@ -1,16 +1,19 @@
-import type { APIContext } from 'astro';
-import { supabaseClient } from '@/db/supabase.client';
+import type { SupabaseClient } from '@/db/supabase.client';
 import type { ApiError } from '@/types';
 
 /**
  * Verifies JWT token from Authorization header and checks for admin role.
- * 
- * @param context - Astro API context
+ *
+ * @param request - Incoming request
+ * @param supabase - Supabase client (from context.locals)
  * @returns User ID if authenticated and authorized as admin
- * @throws Response with 401 if unauthorized or 403 if not admin
+ * @throws Response with 401 if unauthorized
  */
-export async function requireAdmin(context: APIContext): Promise<string> {
-  const authHeader = context.request.headers.get('Authorization');
+export async function requireAdmin(
+  request: Request,
+  supabase: SupabaseClient,
+): Promise<{ userId: string } | Response> {
+  const authHeader = request.headers.get('Authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return new Response(
       JSON.stringify({
@@ -20,11 +23,11 @@ export async function requireAdmin(context: APIContext): Promise<string> {
         },
       } as ApiError),
       { status: 401, headers: { 'Content-Type': 'application/json' } },
-    ) as unknown as never;
+    );
   }
 
   const token = authHeader.substring(7);
-  const { data: { user }, error } = await supabaseClient.auth.getUser(token);
+  const { data: { user }, error } = await supabase.auth.getUser(token);
 
   if (error || !user) {
     return new Response(
@@ -35,7 +38,7 @@ export async function requireAdmin(context: APIContext): Promise<string> {
         },
       } as ApiError),
       { status: 401, headers: { 'Content-Type': 'application/json' } },
-    ) as unknown as never;
+    );
   }
 
   // Check for admin role in user metadata or app_metadata
@@ -44,14 +47,14 @@ export async function requireAdmin(context: APIContext): Promise<string> {
     return new Response(
       JSON.stringify({
         error: {
-          code: 'FORBIDDEN',
+          code: 'UNAUTHORIZED',
           message: 'Admin access required',
         },
       } as ApiError),
-      { status: 403, headers: { 'Content-Type': 'application/json' } },
-    ) as unknown as never;
+      { status: 401, headers: { 'Content-Type': 'application/json' } },
+    );
   }
 
-  return user.id;
+  return { userId: user.id };
 }
 

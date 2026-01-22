@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { DEFAULT_USER_ID } from '@/db/supabase.client';
+import { requireAdmin } from '@/lib/auth';
 import {
   listAllergens,
   createAllergen,
@@ -15,20 +15,15 @@ import type { ApiError, ApiListSuccess, ApiSuccess } from '@/types';
 
 export const prerender = false;
 
+const jsonHeaders = { 'Content-Type': 'application/json' };
+
 /**
  * GET /api/admin/allergens
  * Lists allergen dictionary entries with filtering, pagination, and sorting.
  */
-export const GET: APIRoute = async ({ url, locals }) => {
-  const userId = DEFAULT_USER_ID;
-  if (!userId || userId === '00000000-0000-0000-0000-000000000000') {
-    return new Response(
-      JSON.stringify({
-        error: { code: 'INTERNAL', message: 'Missing DEFAULT_USER_ID' },
-      } as ApiError),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
-    );
-  }
+export const GET: APIRoute = async ({ request, url, locals }) => {
+  const auth = await requireAdmin(request, locals.supabase);
+  if (auth instanceof Response) return auth;
 
   // Parse and validate query parameters
   const queryParams: Record<string, string> = {};
@@ -46,7 +41,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
           fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
         },
       } as ApiError),
-      { status: 422, headers: { 'Content-Type': 'application/json' } },
+      { status: 422, headers: jsonHeaders },
     );
   }
 
@@ -92,7 +87,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
     return new Response(JSON.stringify(response), {
       status: 200,
       headers: {
-        'Content-Type': 'application/json',
+        ...jsonHeaders,
         'Cache-Control': 'private, max-age=30',
       },
     });
@@ -105,7 +100,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
         JSON.stringify({
           error: { code: 'CONFLICT', message: 'Database conflict' },
         } as ApiError),
-        { status: 409, headers: { 'Content-Type': 'application/json' } },
+        { status: 409, headers: jsonHeaders },
       );
     }
 
@@ -113,7 +108,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
       JSON.stringify({
         error: { code: 'INTERNAL_SERVER_ERROR', message: 'An unexpected error occurred' },
       } as ApiError),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
+      { status: 500, headers: jsonHeaders },
     );
   }
 };
@@ -123,15 +118,8 @@ export const GET: APIRoute = async ({ url, locals }) => {
  * Creates a new allergen dictionary entry with automatic audit logging.
  */
 export const POST: APIRoute = async ({ request, locals }) => {
-  const userId = DEFAULT_USER_ID;
-  if (!userId || userId === '00000000-0000-0000-0000-000000000000') {
-    return new Response(
-      JSON.stringify({
-        error: { code: 'INTERNAL', message: 'Missing DEFAULT_USER_ID' },
-      } as ApiError),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
-    );
-  }
+  const auth = await requireAdmin(request, locals.supabase);
+  if (auth instanceof Response) return auth;
 
   let payload: unknown;
   try {
@@ -141,7 +129,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       JSON.stringify({
         error: { code: 'BAD_REQUEST', message: 'Invalid JSON' },
       } as ApiError),
-      { status: 400, headers: { 'Content-Type': 'application/json' } },
+      { status: 400, headers: jsonHeaders },
     );
   }
 
@@ -150,17 +138,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return new Response(
       JSON.stringify({
         error: {
-          code: 'VALIDATION_ERROR',
+          code: 'BAD_REQUEST',
           message: 'Validation failed',
           fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
         },
       } as ApiError),
-      { status: 422, headers: { 'Content-Type': 'application/json' } },
+      { status: 400, headers: jsonHeaders },
     );
   }
 
   try {
-    const dto = await createAllergen(locals.supabase, userId, parsed.data);
+    const dto = await createAllergen(locals.supabase, auth.userId, parsed.data);
 
     const response: ApiSuccess<typeof dto> = {
       data: dto,
@@ -169,12 +157,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify(response), {
       status: 201,
       headers: {
-        'Content-Type': 'application/json',
+        ...jsonHeaders,
         Location: `/api/admin/allergens/${dto.id}`,
       },
     });
   } catch (e: unknown) {
-    console.error('Create allergen failed', { error: e, userId, operation: 'POST' });
+    console.error('Create allergen failed', { error: e, userId: auth.userId, operation: 'POST' });
 
     const error = e as { code?: string };
     if (error.code === 'DUPLICATE_ALLERGEN_NAME') {
@@ -185,7 +173,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             message: 'Allergen with this name already exists',
           },
         } as ApiError),
-        { status: 409, headers: { 'Content-Type': 'application/json' } },
+        { status: 409, headers: jsonHeaders },
       );
     }
 
@@ -197,7 +185,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             message: 'Allergen with this name already exists',
           },
         } as ApiError),
-        { status: 409, headers: { 'Content-Type': 'application/json' } },
+        { status: 409, headers: jsonHeaders },
       );
     }
 
@@ -205,7 +193,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       JSON.stringify({
         error: { code: 'INTERNAL_SERVER_ERROR', message: 'An unexpected error occurred' },
       } as ApiError),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
+      { status: 500, headers: jsonHeaders },
     );
   }
 };

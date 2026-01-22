@@ -5,7 +5,7 @@ import { z } from 'zod';
  */
 export const createAllergenCommandSchema = z.object({
   allergen_name: z.string().trim().min(1).max(100),
-  synonyms: z.array(z.string().trim().min(1).max(200)).min(1),
+  synonyms: z.array(z.string().trim().min(1).max(100)).default([]),
   is_active: z.boolean(),
 });
 
@@ -15,7 +15,7 @@ export const createAllergenCommandSchema = z.object({
  */
 export const patchAllergenCommandSchema = z.object({
   allergen_name: z.string().trim().min(1).max(100).optional(),
-  synonyms: z.array(z.string().trim().min(1).max(200)).min(1).optional(),
+  synonyms: z.array(z.string().trim().min(1).max(100)).optional(),
   is_active: z.boolean().optional(),
 });
 

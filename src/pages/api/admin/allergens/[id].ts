@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { DEFAULT_USER_ID } from '@/db/supabase.client';
+import { requireAdmin } from '@/lib/auth';
 import {
   getAllergenById,
   updateAllergen,
@@ -13,20 +13,15 @@ import type { ApiError, ApiSuccess } from '@/types';
 
 export const prerender = false;
 
+const jsonHeaders = { 'Content-Type': 'application/json' };
+
 /**
  * PATCH /api/admin/allergens/{id}
  * Updates an allergen dictionary entry with automatic audit logging.
  */
 export const PATCH: APIRoute = async ({ params, request, locals }) => {
-  const userId = DEFAULT_USER_ID;
-  if (!userId || userId === '00000000-0000-0000-0000-000000000000') {
-    return new Response(
-      JSON.stringify({
-        error: { code: 'INTERNAL', message: 'Missing DEFAULT_USER_ID' },
-      } as ApiError),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
-    );
-  }
+  const auth = await requireAdmin(request, locals.supabase);
+  if (auth instanceof Response) return auth;
 
   const id = params.id;
   if (!id) {
@@ -34,7 +29,7 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
       JSON.stringify({
         error: { code: 'BAD_REQUEST', message: 'Missing id' },
       } as ApiError),
-      { status: 400, headers: { 'Content-Type': 'application/json' } },
+      { status: 400, headers: jsonHeaders },
     );
   }
 
@@ -45,7 +40,7 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
       JSON.stringify({
         error: { code: 'BAD_REQUEST', message: 'Invalid UUID format' },
       } as ApiError),
-      { status: 400, headers: { 'Content-Type': 'application/json' } },
+      { status: 400, headers: jsonHeaders },
     );
   }
 
@@ -57,7 +52,7 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
       JSON.stringify({
         error: { code: 'BAD_REQUEST', message: 'Invalid JSON' },
       } as ApiError),
-      { status: 400, headers: { 'Content-Type': 'application/json' } },
+      { status: 400, headers: jsonHeaders },
     );
   }
 
@@ -66,12 +61,12 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
     return new Response(
       JSON.stringify({
         error: {
-          code: 'VALIDATION_ERROR',
+          code: 'BAD_REQUEST',
           message: 'Validation failed',
           fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
         },
       } as ApiError),
-      { status: 422, headers: { 'Content-Type': 'application/json' } },
+      { status: 400, headers: jsonHeaders },
     );
   }
 
@@ -80,16 +75,16 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
     return new Response(
       JSON.stringify({
         error: {
-          code: 'VALIDATION_ERROR',
+          code: 'BAD_REQUEST',
           message: 'At least one field must be provided for update',
         },
       } as ApiError),
-      { status: 422, headers: { 'Content-Type': 'application/json' } },
+      { status: 400, headers: jsonHeaders },
     );
   }
 
   try {
-    const dto = await updateAllergen(locals.supabase, userId, id, parsed.data);
+    const dto = await updateAllergen(locals.supabase, auth.userId, id, parsed.data);
 
     const response: ApiSuccess<typeof dto> = {
       data: dto,
@@ -97,10 +92,15 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
 
     return new Response(JSON.stringify(response), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: jsonHeaders,
     });
   } catch (e: unknown) {
-    console.error('Update allergen failed', { error: e, userId, allergenId: id, operation: 'PATCH' });
+    console.error('Update allergen failed', {
+      error: e,
+      userId: auth.userId,
+      allergenId: id,
+      operation: 'PATCH',
+    });
 
     const error = e as { code?: string };
     if (error.code === 'ALLERGEN_NOT_FOUND') {
@@ -108,7 +108,7 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
         JSON.stringify({
           error: { code: 'ALLERGEN_NOT_FOUND', message: 'Allergen not found' },
         } as ApiError),
-        { status: 404, headers: { 'Content-Type': 'application/json' } },
+        { status: 404, headers: jsonHeaders },
       );
     }
 
@@ -120,7 +120,7 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
             message: 'Allergen with this name already exists',
           },
         } as ApiError),
-        { status: 409, headers: { 'Content-Type': 'application/json' } },
+        { status: 409, headers: jsonHeaders },
       );
     }
 
@@ -132,7 +132,7 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
             message: 'Allergen with this name already exists',
           },
         } as ApiError),
-        { status: 409, headers: { 'Content-Type': 'application/json' } },
+        { status: 409, headers: jsonHeaders },
       );
     }
 
@@ -140,7 +140,7 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
       JSON.stringify({
         error: { code: 'INTERNAL_SERVER_ERROR', message: 'An unexpected error occurred' },
       } as ApiError),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
+      { status: 500, headers: jsonHeaders },
     );
   }
 };
@@ -149,16 +149,9 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
  * DELETE /api/admin/allergens/{id}
  * Soft deletes an allergen dictionary entry (sets is_active = false) with automatic audit logging.
  */
-export const DELETE: APIRoute = async ({ params, locals }) => {
-  const userId = DEFAULT_USER_ID;
-  if (!userId || userId === '00000000-0000-0000-0000-000000000000') {
-    return new Response(
-      JSON.stringify({
-        error: { code: 'INTERNAL', message: 'Missing DEFAULT_USER_ID' },
-      } as ApiError),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
-    );
-  }
+export const DELETE: APIRoute = async ({ params, request, locals }) => {
+  const auth = await requireAdmin(request, locals.supabase);
+  if (auth instanceof Response) return auth;
 
   const id = params.id;
   if (!id) {
@@ -166,7 +159,7 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
       JSON.stringify({
         error: { code: 'BAD_REQUEST', message: 'Missing id' },
       } as ApiError),
-      { status: 400, headers: { 'Content-Type': 'application/json' } },
+      { status: 400, headers: jsonHeaders },
     );
   }
 
@@ -177,18 +170,23 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
       JSON.stringify({
         error: { code: 'BAD_REQUEST', message: 'Invalid UUID format' },
       } as ApiError),
-      { status: 400, headers: { 'Content-Type': 'application/json' } },
+      { status: 400, headers: jsonHeaders },
     );
   }
 
   try {
-    await deleteAllergen(locals.supabase, userId, id);
+    await deleteAllergen(locals.supabase, auth.userId, id);
 
     return new Response(null, {
       status: 204,
     });
   } catch (e: unknown) {
-    console.error('Delete allergen failed', { error: e, userId, allergenId: id, operation: 'DELETE' });
+    console.error('Delete allergen failed', {
+      error: e,
+      userId: auth.userId,
+      allergenId: id,
+      operation: 'DELETE',
+    });
 
     const error = e as { code?: string };
     if (error.code === 'ALLERGEN_NOT_FOUND') {
@@ -196,7 +194,7 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
         JSON.stringify({
           error: { code: 'ALLERGEN_NOT_FOUND', message: 'Allergen not found' },
         } as ApiError),
-        { status: 404, headers: { 'Content-Type': 'application/json' } },
+        { status: 404, headers: jsonHeaders },
       );
     }
 
@@ -204,7 +202,7 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
       JSON.stringify({
         error: { code: 'INTERNAL_SERVER_ERROR', message: 'An unexpected error occurred' },
       } as ApiError),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
+      { status: 500, headers: jsonHeaders },
     );
   }
 };

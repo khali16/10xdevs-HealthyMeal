@@ -1,11 +1,22 @@
 import type { SupabaseClient } from '@/db/supabase.client'
 import type {
   CreateRecipeCommand,
+  PatchRecipeCommand,
   RecipeDTO,
   RecipeRow,
   RecipeIngredientDTO,
   RecipeTags,
 } from '@/types'
+
+export type RecipeSort = 'newest' | 'favorites' | 'top_rated'
+export type RecipesListFilters = {
+  q?: string
+  diet?: string
+  max_calories?: number
+  max_total_time?: number
+  favorite?: boolean
+  tags?: Record<string, string>
+}
 
 export async function createRecipe(
   supabase: SupabaseClient,
@@ -151,17 +162,63 @@ export async function listRecipes(
   userId: string,
   page: number,
   pageSize: number,
+  sort: RecipeSort,
+  filters?: RecipesListFilters,
 ): Promise<{ items: RecipeDTO[]; total: number }> {
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
 
-  const { data, error, count } = await supabase
+  let query = supabase
     .from('recipes')
     .select('*', { count: 'exact' })
     .eq('user_id', userId)
     .is('deleted_at', null)
-    .order('created_at', { ascending: false })
-    .range(from, to)
+
+  if (filters?.q) {
+    query = query.ilike('title', `%${filters.q}%`)
+  }
+
+  if (filters?.max_calories != null) {
+    query = query.lte('calories_per_serving', filters.max_calories)
+  }
+
+  if (filters?.max_total_time != null) {
+    query = query.lte('total_time_minutes', filters.max_total_time)
+  }
+
+  const tagFilters: Record<string, string> = { ...(filters?.tags ?? {}) }
+  if (filters?.diet && !tagFilters.diet) {
+    tagFilters.diet = filters.diet
+  }
+
+  Object.entries(tagFilters).forEach(([key, value]) => {
+    if (value) {
+      query = query.eq(`tags->>${key}`, value)
+    }
+  })
+
+  if (filters?.favorite === true) {
+    const { data: favoritesData, error: favoritesError } = await supabase
+      .from('recipe_favorites')
+      .select('recipe_id')
+      .eq('user_id', userId)
+
+    if (favoritesError) throw mapDbError(favoritesError)
+
+    const favoriteIds = (favoritesData ?? []).map((row) => row.recipe_id)
+    if (favoriteIds.length === 0) {
+      return { items: [], total: 0 }
+    }
+    query = query.in('id', favoriteIds)
+  }
+
+  if (sort === 'newest') {
+    query = query.order('created_at', { ascending: false }).range(from, to)
+  } else {
+    query = query.order('created_at', { ascending: false })
+  }
+
+  const { data, error, count } = await query
 
   if (error) throw mapDbError(error)
 
@@ -178,6 +235,26 @@ export async function listRecipes(
     dto.is_favorite = favorites.has(r.id)
     return dto
   })
+
+  if (sort === 'favorites') {
+    items.sort((a, b) => {
+      const favoriteDiff = Number(b.is_favorite) - Number(a.is_favorite)
+      if (favoriteDiff !== 0) return favoriteDiff
+      return Date.parse(b.created_at ?? '') - Date.parse(a.created_at ?? '')
+    })
+  }
+
+  if (sort === 'top_rated') {
+    items.sort((a, b) => {
+      const ratingDiff = (b.rating ?? -1) - (a.rating ?? -1)
+      if (ratingDiff !== 0) return ratingDiff
+      return Date.parse(b.created_at ?? '') - Date.parse(a.created_at ?? '')
+    })
+  }
+
+  if (sort !== 'newest') {
+    return { items: items.slice(from, to + 1), total: count ?? items.length }
+  }
 
   return { items, total: count ?? items.length }
 } 
@@ -207,6 +284,65 @@ export async function getRecipeById(
   dto.is_favorite = favorites.has(id)
 
   return dto
+}
+
+export async function patchRecipe(
+  supabase: SupabaseClient,
+  userId: string,
+  id: string,
+  cmd: PatchRecipeCommand,
+): Promise<RecipeDTO | null> {
+  const { data: existing, error: existingError } = await supabase
+    .from('recipes')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('id', id)
+    .is('deleted_at', null)
+    .maybeSingle()
+
+  if (existingError) throw mapDbError(existingError)
+  if (!existing) return null
+
+  const current = existing as unknown as RecipeRow
+  const update: Partial<RecipeRow> = {}
+
+  if (cmd.title !== undefined) update.title = cmd.title ?? current.title
+  if (cmd.ingredients !== undefined) update.ingredients = cmd.ingredients ?? current.ingredients
+  if (cmd.steps !== undefined) update.steps = cmd.steps ?? current.steps
+  if (cmd.tags !== undefined) update.tags = cmd.tags ?? {}
+  if (cmd.prep_time_minutes !== undefined) update.prep_time_minutes = cmd.prep_time_minutes
+  if (cmd.cook_time_minutes !== undefined) update.cook_time_minutes = cmd.cook_time_minutes
+  if (cmd.total_time_minutes !== undefined) update.total_time_minutes = cmd.total_time_minutes
+  if (cmd.calories_per_serving !== undefined) update.calories_per_serving = cmd.calories_per_serving
+  if (cmd.servings !== undefined) update.servings = cmd.servings ?? current.servings
+
+  const nextPrep =
+    update.prep_time_minutes !== undefined ? update.prep_time_minutes : current.prep_time_minutes
+  const nextCook =
+    update.cook_time_minutes !== undefined ? update.cook_time_minutes : current.cook_time_minutes
+
+  if (
+    cmd.total_time_minutes === undefined &&
+    (cmd.prep_time_minutes !== undefined || cmd.cook_time_minutes !== undefined)
+  ) {
+    update.total_time_minutes = nextPrep != null && nextCook != null ? nextPrep + nextCook : null
+  }
+
+  if (Object.keys(update).length === 0) {
+    return getRecipeById(supabase, userId, id)
+  }
+
+  update.updated_at = new Date().toISOString()
+
+  const { error: updateError } = await supabase
+    .from('recipes')
+    .update(update)
+    .eq('user_id', userId)
+    .eq('id', id)
+
+  if (updateError) throw mapDbError(updateError)
+
+  return getRecipeById(supabase, userId, id)
 }
 
 

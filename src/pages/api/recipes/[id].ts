@@ -1,10 +1,12 @@
 import type { APIRoute } from 'astro'
-import { getRecipeById } from '@/lib/services/recipes.service'
+import { getRecipeById, patchRecipe } from '@/lib/services/recipes.service'
 import {
   DEFAULT_USER_ID,
   getSupabaseServiceRoleClient,
   supabaseClient,
 } from '@/db/supabase.client'
+import { patchRecipeCommandSchema } from '@/lib/validation/recipes'
+import type { ApiError } from '@/types'
 
 export const prerender = false
 
@@ -12,7 +14,7 @@ export const GET: APIRoute = async ({ params, locals, request }) => {
   const id = params.id
   if (!id) {
     return new Response(
-      JSON.stringify({ error: { code: 'BAD_REQUEST', message: 'Missing id' } }),
+      JSON.stringify({ error: { code: 'BAD_REQUEST', message: 'Missing id' } } as ApiError),
       { status: 400, headers: { 'Content-Type': 'application/json' } },
     )
   }
@@ -43,7 +45,7 @@ export const GET: APIRoute = async ({ params, locals, request }) => {
 
   if (!userId || userId === '00000000-0000-0000-0000-000000000000') {
     return new Response(
-      JSON.stringify({ error: { code: 'INTERNAL', message: 'Missing DEFAULT_USER_ID' } }),
+      JSON.stringify({ error: { code: 'INTERNAL', message: 'Missing DEFAULT_USER_ID' } } as ApiError),
       { status: 500, headers: { 'Content-Type': 'application/json' } },
     )
   }
@@ -52,7 +54,7 @@ export const GET: APIRoute = async ({ params, locals, request }) => {
     const item = await getRecipeById(supabase, userId, id)
     if (!item) {
       return new Response(
-        JSON.stringify({ error: { code: 'NOT_FOUND', message: 'Recipe not found' } }),
+        JSON.stringify({ error: { code: 'NOT_FOUND', message: 'Recipe not found' } } as ApiError),
         { status: 404, headers: { 'Content-Type': 'application/json' } },
       )
     }
@@ -63,7 +65,112 @@ export const GET: APIRoute = async ({ params, locals, request }) => {
   } catch (e) {
     console.error('Get recipe failed', e)
     return new Response(
-      JSON.stringify({ error: { code: 'INTERNAL', message: 'Internal Server Error' } }),
+      JSON.stringify({ error: { code: 'INTERNAL', message: 'Internal Server Error' } } as ApiError),
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
+    )
+  }
+}
+
+export const PATCH: APIRoute = async ({ params, locals, request }) => {
+  const id = params.id
+  if (!id) {
+    return new Response(
+      JSON.stringify({ error: { code: 'BAD_REQUEST', message: 'Missing id' } } as ApiError),
+      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    )
+  }
+
+  // Try to get authenticated user from JWT token
+  let supabase = locals.supabase
+  let userId: string | null = null
+
+  const authHeader = request.headers.get('Authorization')
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7)
+    const { data: { user }, error } = await supabaseClient.auth.getUser(token)
+
+    if (!error && user) {
+      userId = user.id
+      supabase = supabaseClient
+    } else {
+      return new Response(
+        JSON.stringify({ error: { code: 'UNAUTHORIZED', message: 'Invalid or expired token' } } as ApiError),
+        { status: 401, headers: { 'Content-Type': 'application/json' } },
+      )
+    }
+  } else {
+    // No auth header - use service role to bypass RLS for development
+    supabase = getSupabaseServiceRoleClient()
+    userId = DEFAULT_USER_ID
+  }
+
+  if (!userId || userId === '00000000-0000-0000-0000-000000000000') {
+    return new Response(
+      JSON.stringify({ error: { code: 'INTERNAL', message: 'Missing DEFAULT_USER_ID' } } as ApiError),
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
+    )
+  }
+
+  let payload: unknown
+  try {
+    payload = await request.json()
+  } catch {
+    return new Response(
+      JSON.stringify({ error: { code: 'BAD_REQUEST', message: 'Invalid JSON' } } as ApiError),
+      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    )
+  }
+
+  const parsed = patchRecipeCommandSchema.safeParse(payload)
+  if (!parsed.success) {
+    return new Response(
+      JSON.stringify({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Validation failed',
+          fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+        },
+      } as ApiError),
+      { status: 422, headers: { 'Content-Type': 'application/json' } },
+    )
+  }
+
+  const fieldErrors: Record<string, string[]> = {}
+  if (parsed.data.title === null) fieldErrors.title = ['Title cannot be null.']
+  if (parsed.data.ingredients === null) fieldErrors.ingredients = ['Ingredients cannot be null.']
+  if (parsed.data.steps === null) fieldErrors.steps = ['Steps cannot be null.']
+  if (parsed.data.servings === null) fieldErrors.servings = ['Servings cannot be null.']
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return new Response(
+      JSON.stringify({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Validation failed',
+          fieldErrors,
+        },
+      } as ApiError),
+      { status: 422, headers: { 'Content-Type': 'application/json' } },
+    )
+  }
+
+  try {
+    const updated = await patchRecipe(supabase, userId, id, parsed.data)
+    if (!updated) {
+      return new Response(
+        JSON.stringify({ error: { code: 'NOT_FOUND', message: 'Recipe not found' } } as ApiError),
+        { status: 404, headers: { 'Content-Type': 'application/json' } },
+      )
+    }
+
+    return new Response(JSON.stringify({ data: updated }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  } catch (e) {
+    console.error('Patch recipe failed', { error: e, userId, recipeId: id, operation: 'PATCH' })
+    return new Response(
+      JSON.stringify({ error: { code: 'INTERNAL', message: 'Internal Server Error' } } as ApiError),
       { status: 500, headers: { 'Content-Type': 'application/json' } },
     )
   }

@@ -1,6 +1,8 @@
 import type {
   ApiError,
   ApiListMeta,
+  CreateRecipeCommand,
+  PatchRecipeCommand,
   PutRecipeFavoriteCommand,
   PutRecipeRatingCommand,
   RecipeDTO,
@@ -14,7 +16,7 @@ type RecipeResponse = { data: RecipeDTO }
 type RecipeRatingResponse = { data: RecipeRatingDTO }
 type RecipeFavoriteResponse = { data: RecipeFavoriteDTO }
 
-export type ApiMappedError = { code?: string; message: string }
+export type ApiMappedError = { code?: string; message: string; fieldErrors?: Record<string, string[]> }
 
 const DEFAULT_ERROR: ApiMappedError = { code: 'INTERNAL', message: 'Unexpected API response' }
 
@@ -194,6 +196,66 @@ export async function deleteRecipe(id: string): Promise<void> {
   throw err
 }
 
+export async function createRecipe(cmd: CreateRecipeCommand): Promise<RecipeResponse> {
+  const res = await fetch('/api/recipes', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify(cmd),
+  })
+
+  let payload: unknown
+  try {
+    payload = await res.json()
+  } catch {
+    throw DEFAULT_ERROR
+  }
+
+  if (!res.ok) {
+    const err = mapApiError(payload)
+    throw err
+  }
+
+  const typed = payload as RecipeResponse
+  if (!typed?.data) {
+    throw DEFAULT_ERROR
+  }
+
+  return typed
+}
+
+export async function patchRecipe(
+  id: string,
+  cmd: PatchRecipeCommand,
+): Promise<RecipeResponse> {
+  const res = await fetch(`/api/recipes/${id}`, {
+    method: 'PATCH',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify(cmd),
+  })
+
+  let payload: unknown
+  try {
+    payload = await res.json()
+  } catch {
+    throw DEFAULT_ERROR
+  }
+
+  if (!res.ok) {
+    let err = mapApiError(payload)
+    if (res.status === 404) {
+      err = { ...err, code: err.code ?? 'NOT_FOUND' }
+    }
+    throw err
+  }
+
+  const typed = payload as RecipeResponse
+  if (!typed?.data) {
+    throw DEFAULT_ERROR
+  }
+
+  return typed
+}
+
 function buildRecipesQueryString(query: RecipesListQuery): string {
   const params = new URLSearchParams()
 
@@ -219,7 +281,11 @@ function buildRecipesQueryString(query: RecipesListQuery): string {
 function mapApiError(payload: unknown): ApiMappedError {
   const apiErr = payload as ApiError | undefined
   if (apiErr?.error?.message) {
-    return { code: apiErr.error.code, message: apiErr.error.message }
+    return {
+      code: apiErr.error.code,
+      message: apiErr.error.message,
+      fieldErrors: apiErr.error.fieldErrors,
+    }
   }
   return DEFAULT_ERROR
 }

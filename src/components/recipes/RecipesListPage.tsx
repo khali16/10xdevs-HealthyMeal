@@ -143,7 +143,11 @@ const RecipesListPage: React.FC = () => {
   return (
     <section className="min-h-screen bg-background">
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 sm:px-6 lg:px-8">
-        <RecipesListHeader sort={query.sort} onSortChange={handleSortChange} />
+        <RecipesListHeader
+          sort={query.sort}
+          onSortChange={handleSortChange}
+          onCreateNew={() => window.location.assign('/recipes/new')}
+        />
         <RecipesFiltersBar filters={filters} onChange={handleFiltersChange} onClear={handleClearFilters} />
 
         {viewState.status === 'error' && (

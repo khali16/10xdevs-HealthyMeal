@@ -1,0 +1,12 @@
+---
+import Layout from '@/layouts/Layout.astro'
+import RecipeEditPage from '@/components/recipe-edit/RecipeEditPage'
+
+const { id } = Astro.params
+---
+
+<Layout title="Edycja przepisu">
+  <main class="min-h-screen bg-background text-foreground">
+    <RecipeEditPage recipeId={id ?? ''} client:load />
+  </main>
+</Layout>

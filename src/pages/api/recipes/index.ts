@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro'
 import { createRecipeCommandSchema } from '@/lib/validation/recipes'
-import { createRecipe, listRecipes } from '@/lib/services/recipes.service'
+import { createRecipe, listRecipes, type RecipeSort } from '@/lib/services/recipes.service'
 import { DEFAULT_USER_ID, getSupabaseServiceRoleClient, supabaseClient } from '@/db/supabase.client'
 import type { ApiError, ApiListMeta } from '@/types'
 
@@ -203,9 +203,25 @@ export const GET: APIRoute = async (context) => {
     Number.parseInt(url.searchParams.get('page_size') ?? '20', 10) || 20,
     100,
   )
+  const sortRaw = url.searchParams.get('sort')
+  const allowedSorts: RecipeSort[] = ['newest', 'favorites', 'top_rated']
+  const sort = allowedSorts.includes(sortRaw as RecipeSort) ? (sortRaw as RecipeSort) : 'newest'
+  const q = sanitizeString(url.searchParams.get('q'), 200)
+  const diet = sanitizeString(url.searchParams.get('diet'), 50)
+  const maxCalories = clampInt(url.searchParams.get('max_calories'), 0, 100000)
+  const maxTotalTime = clampInt(url.searchParams.get('max_total_time'), 0, 2000)
+  const favorite = parseBoolean(url.searchParams.get('favorite'))
+  const tags = readTags(url.searchParams)
 
   try {
-    const { items, total } = await listRecipes(supabase, userId, page, pageSize)
+    const { items, total } = await listRecipes(supabase, userId, page, pageSize, sort, {
+      q: q ?? undefined,
+      diet: diet ?? undefined,
+      max_calories: maxCalories ?? undefined,
+      max_total_time: maxTotalTime ?? undefined,
+      favorite: favorite ?? undefined,
+      tags,
+    })
 
     const meta: ApiListMeta = {
       page,
@@ -229,4 +245,42 @@ export const GET: APIRoute = async (context) => {
   }
 }
 
+function sanitizeString(value: string | null | undefined, maxLength: number): string | null {
+  if (!value) return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  return trimmed.slice(0, maxLength)
+}
+
+function clampInt(
+  value: string | number | null | undefined,
+  min: number,
+  max: number,
+): number | null {
+  if (value == null) return null
+  const num = typeof value === 'number' ? value : Number.parseInt(value, 10)
+  if (Number.isNaN(num)) return null
+  const clamped = Math.min(Math.max(num, min), max)
+  return clamped
+}
+
+function parseBoolean(value: string | null): boolean | null {
+  if (value == null) return null
+  if (value === 'true' || value === '1') return true
+  if (value === 'false' || value === '0') return false
+  return null
+}
+
+function readTags(params: URLSearchParams): Record<string, string> | undefined {
+  const tags: Record<string, string> = {}
+  params.forEach((value, key) => {
+    if (key.startsWith('tag:') && value) {
+      const tagKey = key.slice(4)
+      if (tagKey) {
+        tags[tagKey] = value
+      }
+    }
+  })
+  return Object.keys(tags).length ? tags : undefined
+}
 

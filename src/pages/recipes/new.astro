@@ -1,0 +1,10 @@
+---
+import Layout from '@/layouts/Layout.astro'
+import RecipeCreateWizardPage from '@/components/recipe-create/RecipeCreateWizardPage'
+---
+
+<Layout title="Nowy przepis">
+  <main class="min-h-screen bg-background text-foreground">
+    <RecipeCreateWizardPage client:load />
+  </main>
+</Layout>

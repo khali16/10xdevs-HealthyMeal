@@ -17,6 +17,9 @@ type Props = {
 
 export const RecipesListHeader: React.FC<Props> = ({ sort, onSortChange, onCreateNew }) => {
   const handleValueChange = (value: string) => onSortChange(value as RecipeSort)
+  const handleEditPreferences = () => {
+    window.location.assign('/profile/edit')
+  }
 
   return (
     <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -38,6 +41,9 @@ export const RecipesListHeader: React.FC<Props> = ({ sort, onSortChange, onCreat
             </SelectContent>
           </Select>
         </div>
+        <Button onClick={handleEditPreferences} variant="secondary">
+          Edytuj preferencje
+        </Button>
         <Button onClick={onCreateNew} variant="default">
           Nowy przepis
         </Button>

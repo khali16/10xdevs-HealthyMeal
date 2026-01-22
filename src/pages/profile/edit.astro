@@ -1,0 +1,10 @@
+---
+import Layout from '@/layouts/Layout.astro'
+import UserPreferencesEditPage from '@/components/user-preferences/UserPreferencesEditPage'
+---
+
+<Layout title="Profil — preferencje">
+  <main class="min-h-screen bg-background text-foreground">
+    <UserPreferencesEditPage client:load />
+  </main>
+</Layout>

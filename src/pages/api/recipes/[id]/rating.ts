@@ -1,5 +1,9 @@
 import type { APIRoute } from 'astro'
-import { DEFAULT_USER_ID } from '@/db/supabase.client'
+import {
+  DEFAULT_USER_ID,
+  getSupabaseServiceRoleClient,
+  supabaseClient,
+} from '@/db/supabase.client'
 import { getRecipeById } from '@/lib/services/recipes.service'
 import { upsertRating, deleteRating } from '@/lib/services/ratings.service'
 import { putRecipeRatingCommandSchema } from '@/lib/validation/recipes'
@@ -20,7 +24,30 @@ export const PUT: APIRoute = async ({ params, locals, request }) => {
     )
   }
 
-  const userId = DEFAULT_USER_ID
+  // Try to get authenticated user from JWT token
+  let supabase = locals.supabase
+  let userId: string | null = null
+
+  const authHeader = request.headers.get('Authorization')
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7)
+    const { data: { user }, error } = await supabaseClient.auth.getUser(token)
+
+    if (!error && user) {
+      userId = user.id
+      supabase = supabaseClient
+    } else {
+      return new Response(
+        JSON.stringify({ error: { code: 'UNAUTHORIZED', message: 'Invalid or expired token' } } as ApiError),
+        { status: 401, headers: { 'Content-Type': 'application/json' } },
+      )
+    }
+  } else {
+    // No auth header - use service role to bypass RLS for development
+    supabase = getSupabaseServiceRoleClient()
+    userId = DEFAULT_USER_ID
+  }
+
   if (!userId || userId === '00000000-0000-0000-0000-000000000000') {
     return new Response(
       JSON.stringify({ error: { code: 'INTERNAL', message: 'Missing DEFAULT_USER_ID' } } as ApiError),
@@ -54,7 +81,7 @@ export const PUT: APIRoute = async ({ params, locals, request }) => {
 
   try {
     // Check if recipe exists
-    const recipe = await getRecipeById(locals.supabase, userId, id)
+    const recipe = await getRecipeById(supabase, userId, id)
     if (!recipe) {
       return new Response(
         JSON.stringify({ error: { code: 'NOT_FOUND', message: 'Recipe not found' } } as ApiError),
@@ -63,7 +90,7 @@ export const PUT: APIRoute = async ({ params, locals, request }) => {
     }
 
     // Upsert rating
-    const dto = await upsertRating(locals.supabase, userId, id, parsed.data.rating)
+    const dto = await upsertRating(supabase, userId, id, parsed.data.rating)
     return new Response(JSON.stringify({ data: dto }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
@@ -91,7 +118,7 @@ export const PUT: APIRoute = async ({ params, locals, request }) => {
  * DELETE /api/recipes/[id]/rating
  * Deletes a rating for a recipe by the default user.
  */
-export const DELETE: APIRoute = async ({ params, locals }) => {
+export const DELETE: APIRoute = async ({ params, locals, request }) => {
   const id = params.id
   if (!id) {
     return new Response(
@@ -100,7 +127,30 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
     )
   }
 
-  const userId = DEFAULT_USER_ID
+  // Try to get authenticated user from JWT token
+  let supabase = locals.supabase
+  let userId: string | null = null
+
+  const authHeader = request.headers.get('Authorization')
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7)
+    const { data: { user }, error } = await supabaseClient.auth.getUser(token)
+
+    if (!error && user) {
+      userId = user.id
+      supabase = supabaseClient
+    } else {
+      return new Response(
+        JSON.stringify({ error: { code: 'UNAUTHORIZED', message: 'Invalid or expired token' } } as ApiError),
+        { status: 401, headers: { 'Content-Type': 'application/json' } },
+      )
+    }
+  } else {
+    // No auth header - use service role to bypass RLS for development
+    supabase = getSupabaseServiceRoleClient()
+    userId = DEFAULT_USER_ID
+  }
+
   if (!userId || userId === '00000000-0000-0000-0000-000000000000') {
     return new Response(
       JSON.stringify({ error: { code: 'INTERNAL', message: 'Missing DEFAULT_USER_ID' } } as ApiError),
@@ -110,7 +160,7 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
 
   try {
     // Check if recipe exists
-    const recipe = await getRecipeById(locals.supabase, userId, id)
+    const recipe = await getRecipeById(supabase, userId, id)
     if (!recipe) {
       return new Response(
         JSON.stringify({ error: { code: 'NOT_FOUND', message: 'Recipe not found' } } as ApiError),
@@ -119,7 +169,7 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
     }
 
     // Delete rating
-    const deleted = await deleteRating(locals.supabase, userId, id)
+    const deleted = await deleteRating(supabase, userId, id)
     if (!deleted) {
       return new Response(
         JSON.stringify({ error: { code: 'NOT_FOUND', message: 'Rating not found' } } as ApiError),
