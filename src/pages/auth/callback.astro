@@ -1,0 +1,27 @@
+---
+import { createSupabaseServerInstance } from '@/db/supabase.client'
+
+export const prerender = false
+
+const rawReturnTo = Astro.url.searchParams.get('returnTo')
+const returnTo = rawReturnTo && rawReturnTo.startsWith('/') ? rawReturnTo : null
+const code = Astro.url.searchParams.get('code')
+
+if (!code) {
+  return Astro.redirect('/auth/login?error=oauth')
+}
+
+const supabase = createSupabaseServerInstance({
+  cookies: Astro.cookies,
+  headers: Astro.request.headers,
+})
+
+const { error } = await supabase.auth.exchangeCodeForSession(code)
+
+if (error) {
+  console.error('OAuth callback failed', error)
+  return Astro.redirect('/auth/login?error=oauth')
+}
+
+return Astro.redirect(returnTo ?? '/recipes')
+---

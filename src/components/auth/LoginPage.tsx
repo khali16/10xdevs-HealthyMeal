@@ -20,6 +20,7 @@ type LoginPageProps = {
 const LoginPage: React.FC<LoginPageProps> = ({ returnTo, prefillEmail }) => {
   const [apiError, setApiError] = React.useState<{ code?: string; message: string } | null>(null)
   const [rateLimitSeconds, setRateLimitSeconds] = React.useState<number | null>(null)
+  const [isOauthLoading, setIsOauthLoading] = React.useState(false)
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginCommandSchema),
@@ -31,16 +32,82 @@ const LoginPage: React.FC<LoginPageProps> = ({ returnTo, prefillEmail }) => {
     form.reset({ email: prefillEmail ?? '', password: '' })
   }, [form, prefillEmail])
 
+  const emailValue = form.watch('email')
+  const passwordValue = form.watch('password')
+
   const handleRateLimitExpired = React.useCallback(() => {
     setRateLimitSeconds(null)
   }, [])
 
   const handleSubmit = form.handleSubmit(async (values) => {
-    void values
     setApiError(null)
+    setRateLimitSeconds(null)
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values),
+      })
+
+      const payload = await res.json().catch(() => null)
+      if (!res.ok) {
+        const retryAfterSeconds =
+          typeof payload?.error?.retry_after_seconds === 'number'
+            ? payload.error.retry_after_seconds
+            : null
+        if (res.status === 429 && retryAfterSeconds) {
+          setRateLimitSeconds(retryAfterSeconds)
+        }
+        const message =
+          typeof payload?.error?.message === 'string'
+            ? payload.error.message
+            : 'Nie udało się zalogować.'
+        setApiError({ code: payload?.error?.code, message })
+        return
+      }
+
+      window.location.assign(returnTo ?? '/recipes')
+    } catch {
+      setApiError({ message: 'Nie udało się połączyć z serwerem. Spróbuj ponownie.' })
+    }
   })
 
   const isRateLimited = typeof rateLimitSeconds === 'number' && rateLimitSeconds > 0
+  const isMissingCredentials = !emailValue?.trim() || !passwordValue?.trim()
+  const isSubmitDisabled = form.formState.isSubmitting || isRateLimited || isMissingCredentials
+
+  const handleGoogleLogin = React.useCallback(async () => {
+    setApiError(null)
+    setIsOauthLoading(true)
+    try {
+      const res = await fetch('/api/auth/oauth/google', {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ returnTo }),
+      })
+      const payload = await res.json().catch(() => null)
+      if (!res.ok || !payload?.data?.url) {
+        const message =
+          typeof payload?.error?.message === 'string'
+            ? payload.error.message
+            : 'Nie udało się rozpocząć logowania przez Google.'
+        setApiError({ code: payload?.error?.code, message })
+        return
+      }
+      window.location.assign(payload.data.url)
+    } catch {
+      setApiError({ message: 'Nie udało się połączyć z serwerem. Spróbuj ponownie.' })
+    } finally {
+      setIsOauthLoading(false)
+    }
+  }, [returnTo])
 
   return (
     <section className="mx-auto flex w-full max-w-md flex-col gap-6 px-4 py-12 sm:px-6">
@@ -95,8 +162,17 @@ const LoginPage: React.FC<LoginPageProps> = ({ returnTo, prefillEmail }) => {
               disabled={form.formState.isSubmitting}
             />
 
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleGoogleLogin}
+              disabled={form.formState.isSubmitting || isOauthLoading}
+            >
+              {isOauthLoading ? 'Łączenie z Google...' : 'Zaloguj się z Google'}
+            </Button>
+
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <Button type="submit" disabled={form.formState.isSubmitting || isRateLimited}>
+              <Button type="submit" disabled={isSubmitDisabled}>
                 {form.formState.isSubmitting ? 'Logowanie...' : 'Zaloguj się'}
               </Button>
               <Button asChild variant="link" size="sm" className="px-0">

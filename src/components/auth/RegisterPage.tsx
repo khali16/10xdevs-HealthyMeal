@@ -29,8 +29,31 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ prefillEmail }) => {
   }, [form, prefillEmail])
 
   const handleSubmit = form.handleSubmit(async (values) => {
-    void values
     setApiError(null)
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values),
+      })
+
+      const payload = await res.json().catch(() => null)
+      if (!res.ok) {
+        const message =
+          typeof payload?.error?.message === 'string'
+            ? payload.error.message
+            : 'Nie udało się utworzyć konta.'
+        setApiError({ code: payload?.error?.code, message })
+        return
+      }
+
+      window.location.assign('/recipes')
+    } catch {
+      setApiError({ message: 'Nie udało się połączyć z serwerem. Spróbuj ponownie.' })
+    }
   })
 
   return (

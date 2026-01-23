@@ -3,6 +3,11 @@ import Layout from '@/layouts/Layout.astro'
 import RecipeDetailsPage from '@/components/recipes-details/RecipeDetailsPage'
 
 const { id } = Astro.params
+const { user } = Astro.locals
+if (!user) {
+  const returnTo = `${Astro.url.pathname}${Astro.url.search}`
+  return Astro.redirect(`/auth/login?returnTo=${encodeURIComponent(returnTo)}`)
+}
 ---
 
 <Layout title="Szczegóły przepisu">

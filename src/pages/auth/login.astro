@@ -1,11 +1,26 @@
 ---
 import PublicLayout from '@/layouts/PublicLayout.astro'
 import LoginPage from '@/components/auth/LoginPage'
+import { createSupabaseServerInstance } from '@/db/supabase.client'
 
 export const prerender = false
 
-const returnTo = Astro.url.searchParams.get('returnTo')
+const rawReturnTo = Astro.url.searchParams.get('returnTo')
+const returnTo = rawReturnTo && rawReturnTo.startsWith('/') ? rawReturnTo : null
 const prefillEmail = Astro.url.searchParams.get('email')
+
+const supabase = createSupabaseServerInstance({
+  cookies: Astro.cookies,
+  headers: Astro.request.headers,
+})
+
+const {
+  data: { user },
+} = await supabase.auth.getUser()
+
+if (user) {
+  return Astro.redirect(returnTo ?? '/recipes')
+}
 ---
 
 <PublicLayout title="Zaloguj się">

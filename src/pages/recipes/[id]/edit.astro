@@ -3,6 +3,11 @@ import Layout from '@/layouts/Layout.astro'
 import RecipeEditPage from '@/components/recipe-edit/RecipeEditPage'
 
 const { id } = Astro.params
+const { user } = Astro.locals
+if (!user) {
+  const returnTo = `${Astro.url.pathname}${Astro.url.search}`
+  return Astro.redirect(`/auth/login?returnTo=${encodeURIComponent(returnTo)}`)
+}
 ---
 
 <Layout title="Edycja przepisu">
