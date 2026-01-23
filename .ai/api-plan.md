@@ -5,6 +5,7 @@
 - Users (auth) → Supabase Auth (`auth.users`); application endpoints expose `GET /me` only
 - UserPreferences → `user_preferences`
 - Recipes → `recipes`
+- RecipeTemplates → `recipe_templates` (seeded example/recommended recipes; used to create private user copies)
 - RecipeRatings → `recipe_ratings`
 - RecipeFavorites → `recipe_favorites`
 - AIAdjustments (jobs) → `ai_adjustments`
@@ -15,6 +16,7 @@
 - SystemConfig (admin) → `system_config`
 - LoginAttempts (internal) → `login_attempts`
 - UserSessions (internal) → `user_sessions`
+- UserOnboarding → `user_onboarding`
 
 Notes:
 - All tables have RLS enabled per schema; access is restricted to the owner (`auth.uid()`), except admin endpoints which require `role=admin` and service-role DB access for write operations that bypass RLS as needed.
@@ -60,12 +62,39 @@ Supabase handles sign-up/sign-in client-side. Server provides identity helper an
           "diet": "vegan" | null,
           "allergens_count": 3,
           "exclusions_count": 2
+        },
+        "onboarding": {
+          "sample_recipes": {
+            "state": "unseen" | "dismissed" | "imported",
+            "should_prompt": true,
+            "templates_available_count": 12
+          }
         }
       }
     }
     ```
   - Success: 200
   - Errors: 401 (unauthenticated)
+
+- POST /api/onboarding/sample-recipes
+  - Description: Handle first-login prompt for importing example recipes into user's private list
+  - Request:
+    ```json
+    { "action": "import" | "dismiss" }
+    ```
+  - Behavior:
+    - `import`: copies active `recipe_templates` into `recipes` for current user (private copies), sets `recipes.template_id`, and marks onboarding as imported (idempotent)
+    - `dismiss`: marks onboarding as dismissed; prompt should not reappear by default
+  - Response (200):
+    ```json
+    {
+      "data": {
+        "state": "dismissed" | "imported",
+        "imported_count": 12
+      }
+    }
+    ```
+  - Errors: 401, 422 (invalid action)
 
 ### 2.2 User Preferences
 
@@ -443,6 +472,7 @@ Allergen Dictionary (Admin)
 
 Analytics
 - Allowed actions: `AIAdjustRequested`, `AIAdjustSucceeded`, `AIAdjustFailed`, `ProfileCompleted` (extendable). Partitioned inserts per month table; indexes on `created_at`, `user_id`, `action`, `status`.
+  - Additional recommended actions: `SampleRecipesPrompted`, `SampleRecipesImported`, `SampleRecipesDismissed`
 
 System Config
 - Keys include: `ai_daily_limit`, `ai_timeout_seconds`, `confidence_threshold`, `retention_months`, `rate_limit_attempts`, `rate_limit_window_minutes`.

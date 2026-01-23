@@ -48,6 +48,7 @@ CREATE INDEX idx_user_preferences_allergens ON user_preferences USING GIN(allerg
 CREATE TABLE recipes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    template_id UUID NULL REFERENCES recipe_templates(id) ON DELETE SET NULL,
     title VARCHAR(255) NOT NULL,
     ingredients JSONB NOT NULL DEFAULT '[]'::jsonb,
     steps JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -67,6 +68,7 @@ CREATE TABLE recipes (
 
 -- Indeksy
 CREATE INDEX idx_recipes_user_id ON recipes(user_id);
+CREATE INDEX idx_recipes_template_id ON recipes(template_id);
 CREATE INDEX idx_recipes_updated_at ON recipes(updated_at DESC);
 CREATE INDEX idx_recipes_is_ai_adjusted ON recipes(is_ai_adjusted);
 CREATE INDEX idx_recipes_original_recipe_id ON recipes(original_recipe_id);
@@ -75,6 +77,37 @@ CREATE INDEX idx_recipes_ingredients ON recipes USING GIN(ingredients);
 CREATE INDEX idx_recipes_tags ON recipes USING GIN(tags);
 CREATE INDEX idx_recipes_calories ON recipes(calories_per_serving);
 CREATE INDEX idx_recipes_total_time ON recipes(total_time_minutes);
+
+-- Idempotencja importu przykładowych przepisów: jeden template maks. raz na użytkownika
+CREATE UNIQUE INDEX uq_recipes_user_template
+ON recipes(user_id, template_id)
+WHERE template_id IS NOT NULL;
+```
+
+### 1.3a Tabela `recipe_templates`
+Szablony przykładowych/polecanych przepisów (seedowane i zarządzane przez admin/service-role). Użytkownik nie pracuje na nich bezpośrednio — system tworzy prywatne kopie w `recipes`.
+```sql
+CREATE TABLE recipe_templates (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title VARCHAR(255) NOT NULL,
+    ingredients JSONB NOT NULL DEFAULT '[]'::jsonb,
+    steps JSONB NOT NULL DEFAULT '[]'::jsonb,
+    tags JSONB NOT NULL DEFAULT '{}'::jsonb,
+    prep_time_minutes INTEGER NULL CHECK (prep_time_minutes >= 0),
+    cook_time_minutes INTEGER NULL CHECK (cook_time_minutes >= 0),
+    total_time_minutes INTEGER NULL CHECK (total_time_minutes >= 0),
+    calories_per_serving INTEGER NULL CHECK (calories_per_serving >= 0),
+    servings INTEGER NOT NULL DEFAULT 1 CHECK (servings > 0),
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    sort_order INTEGER NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Indeksy
+CREATE INDEX idx_recipe_templates_is_active ON recipe_templates(is_active) WHERE is_active = true;
+CREATE INDEX idx_recipe_templates_sort_order ON recipe_templates(sort_order);
+CREATE INDEX idx_recipe_templates_tags ON recipe_templates USING GIN(tags);
 ```
 
 ### 1.4 Tabela `recipe_ratings`
@@ -243,6 +276,24 @@ CREATE INDEX idx_user_sessions_session_id ON user_sessions(session_id);
 CREATE INDEX idx_user_sessions_expires_at ON user_sessions(expires_at);
 ```
 
+### 1.11a Tabela `user_onboarding`
+Stan decyzji użytkownika w onboardingu (np. czy importował przykładowe przepisy). Oddzielone od `user_preferences`, bo nie jest to preferencja żywieniowa.
+```sql
+CREATE TABLE user_onboarding (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    sample_recipes_prompted_at TIMESTAMP WITH TIME ZONE NULL,
+    sample_recipes_imported_at TIMESTAMP WITH TIME ZONE NULL,
+    sample_recipes_dismissed_at TIMESTAMP WITH TIME ZONE NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id)
+);
+
+-- Indeksy
+CREATE INDEX idx_user_onboarding_user_id ON user_onboarding(user_id);
+```
+
 ### 1.12 Tabela `login_attempts`
 ```sql
 CREATE TABLE login_attempts (
@@ -285,12 +336,14 @@ CREATE INDEX idx_system_config_active ON system_config(is_active);
 
 ### 2.2 Relacje jeden-do-wielu
 - `users` (1) → `recipes` (many)
+- `recipe_templates` (1) → `recipes` (many) [template_id]
 - `users` (1) → `recipe_ratings` (many)
 - `users` (1) → `recipe_favorites` (many)
 - `users` (1) → `ai_adjustments` (many)
 - `users` (1) → `presets` (many)
 - `users` (1) → `allergen_dictionary_audit` (many)
 - `users` (1) → `user_sessions` (many)
+- `users` (1) → `user_onboarding` (1)
 - `recipes` (1) → `recipe_ratings` (many)
 - `recipes` (1) → `recipe_favorites` (many)
 - `recipes` (1) → `ai_adjustments` (many) [original_recipe_id]
@@ -333,10 +386,12 @@ CREATE INDEX idx_recipe_ratings_recipe_rating ON recipe_ratings(recipe_id, ratin
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;
 ALTER TABLE recipes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE recipe_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE recipe_ratings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE recipe_favorites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_adjustments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_onboarding ENABLE ROW LEVEL SECURITY;
 ```
 
 ### 4.2 Polityki RLS
@@ -350,6 +405,11 @@ CREATE POLICY user_preferences_own_data ON user_preferences FOR ALL TO authentic
 -- Przepisy użytkownika
 CREATE POLICY recipes_own_data ON recipes FOR ALL TO authenticated USING (auth.uid() = user_id);
 
+-- Szablony przepisów (tylko odczyt dla zalogowanych; zapis tylko przez admin/service-role poza RLS)
+CREATE POLICY recipe_templates_read ON recipe_templates
+FOR SELECT TO authenticated
+USING (is_active = true);
+
 -- Oceny przepisów
 CREATE POLICY recipe_ratings_own_data ON recipe_ratings FOR ALL TO authenticated USING (auth.uid() = user_id);
 
@@ -361,6 +421,11 @@ CREATE POLICY ai_adjustments_own_data ON ai_adjustments FOR ALL TO authenticated
 
 -- Sesje użytkownika
 CREATE POLICY user_sessions_own_data ON user_sessions FOR ALL TO authenticated USING (auth.uid() = user_id);
+
+-- Onboarding użytkownika
+CREATE POLICY user_onboarding_own_data ON user_onboarding
+FOR ALL TO authenticated
+USING (auth.uid() = user_id);
 ```
 
 ## 5. Dodatkowe uwagi i wyjaśnienia
@@ -435,6 +500,8 @@ CREATE TRIGGER update_ai_adjustments_updated_at BEFORE UPDATE ON ai_adjustments 
 CREATE TRIGGER update_presets_updated_at BEFORE UPDATE ON presets FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_allergen_dictionary_updated_at BEFORE UPDATE ON allergen_dictionary FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_system_config_updated_at BEFORE UPDATE ON system_config FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_recipe_templates_updated_at BEFORE UPDATE ON recipe_templates FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_user_onboarding_updated_at BEFORE UPDATE ON user_onboarding FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 ```
 
 ### 5.4 Inicjalizacja danych
@@ -464,6 +531,11 @@ INSERT INTO system_config (config_key, config_value, description) VALUES
 ('retention_months', '12', 'Okres retencji danych w miesiącach'),
 ('rate_limit_attempts', '5', 'Liczba prób logowania przed blokadą'),
 ('rate_limit_window_minutes', '5', 'Okno czasowe dla rate limiting w minutach');
+
+-- Przykładowe szablony przepisów (minimalny przykład; docelowo seed w migracji/admin panelu)
+INSERT INTO recipe_templates (title, ingredients, steps, tags, total_time_minutes, servings, is_active, sort_order)
+VALUES
+('Przykładowa sałatka', '["2 pomidory", "1 ogórek", "oliwa", "sól"]', '["Pokrój warzywa", "Wymieszaj i dopraw"]', '{"diet":"vegetarian","course":"lunch"}', 10, 2, true, 1);
 ```
 
 ### 5.5 Optymalizacje wydajności

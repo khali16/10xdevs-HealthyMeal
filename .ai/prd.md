@@ -35,6 +35,8 @@ HealthyMeal rozwiązuje te problemy poprzez:
 - Wymagane pola profilu: alergeny (lista 14 UE), lista wykluczeń, dieta.
 - Opcjonalne pola: docelowe kalorie/porcje.
 - Onboarding do 60 sekund z „soft gate” do akcji AI, jeśli profil niekompletny.
+- Po rejestracji/pierwszym logowaniu użytkownik widzi modal z pytaniem, czy chce zasilić swoje konto przykładowymi/polecanymi przepisami (dodanymi jako prywatne kopie do jego konta).
+- Użytkownik może odrzucić import („Nie teraz”) i nie powinien widzieć modala ponownie; powinna istnieć możliwość uruchomienia importu później z poziomu UI (np. ustawienia).
 
   3.3 Przepisy (CRUD)
 
@@ -207,6 +209,17 @@ Kryteria akceptacji:
 
 - Pola są opcjonalne i walidowane.
 - Wpływają na parametry akcji AI i przelicznik porcji.
+
+US-013
+Tytuł: Import przykładowych przepisów po pierwszym logowaniu
+Opis: Jako użytkownik po rejestracji/pierwszym logowaniu chcę móc jednym kliknięciem dodać przykładowe przepisy, aby szybciej zobaczyć jak działa aplikacja.
+Kryteria akceptacji:
+
+- System wyświetla modal tylko wtedy, gdy użytkownik nie ma jeszcze przepisów i nie podjął wcześniej decyzji (import/odrzucenie).
+- Modal oferuje dwie akcje: „Dodaj przykładowe przepisy” oraz „Nie teraz”.
+- Po wybraniu importu, przepisy trafiają na konto użytkownika jako prywatne (widoczne tylko dla właściciela) i są dostępne na liście przepisów.
+- Import jest idempotentny (ponowne kliknięcie/retry nie tworzy duplikatów).
+- Po odrzuceniu („Nie teraz”) modal nie pokazuje się ponownie; użytkownik może uruchomić import później z UI.
 
 US-020
 Tytuł: Dodanie przepisu (wklej tekst)

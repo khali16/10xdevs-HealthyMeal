@@ -1,0 +1,12 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro'
+import RegisterPage from '@/components/auth/RegisterPage'
+
+export const prerender = false
+
+const prefillEmail = Astro.url.searchParams.get('email')
+---
+
+<PublicLayout title="Załóż konto">
+  <RegisterPage client:load prefillEmail={prefillEmail} />
+</PublicLayout>

@@ -1,0 +1,13 @@
+---
+import PublicLayout from '@/layouts/PublicLayout.astro'
+import LoginPage from '@/components/auth/LoginPage'
+
+export const prerender = false
+
+const returnTo = Astro.url.searchParams.get('returnTo')
+const prefillEmail = Astro.url.searchParams.get('email')
+---
+
+<PublicLayout title="Zaloguj się">
+  <LoginPage client:load returnTo={returnTo} prefillEmail={prefillEmail} />
+</PublicLayout>
