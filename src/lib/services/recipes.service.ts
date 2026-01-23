@@ -6,6 +6,8 @@ import type {
   RecipeRow,
   RecipeIngredientDTO,
   RecipeTags,
+  StartAIAdjustmentCommand,
+  StartAIAdjustmentResponse,
 } from '@/types'
 
 export type RecipeSort = 'newest' | 'favorites' | 'top_rated'
@@ -343,6 +345,35 @@ export async function patchRecipe(
   if (updateError) throw mapDbError(updateError)
 
   return getRecipeById(supabase, userId, id)
+}
+
+export async function startAIAdjustment(
+  supabase: SupabaseClient,
+  userId: string,
+  recipeId: string,
+  cmd: StartAIAdjustmentCommand,
+): Promise<StartAIAdjustmentResponse> {
+  const { data, error } = await supabase
+    .from('ai_adjustments')
+    .insert({
+      user_id: userId,
+      original_recipe_id: recipeId,
+      parameters: cmd.parameters,
+      status: 'pending',
+      model_used: cmd.model,
+    })
+    .select('id, status')
+    .single()
+
+  if (error) throw mapDbError(error)
+  if (!data?.id) {
+    throw new Error('Failed to start AI adjustment')
+  }
+
+  return {
+    job_id: data.id,
+    status: 'pending',
+  }
 }
 
 

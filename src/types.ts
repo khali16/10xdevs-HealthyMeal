@@ -211,6 +211,51 @@ export type StartAIAdjustmentResponse = {
 }
 
 // -----------------------------------------------------------------------------
+// Chat (LLM) - OpenRouter-backed
+// -----------------------------------------------------------------------------
+
+export type ChatRole = 'system' | 'user' | 'assistant'
+
+export type ChatMessage = {
+  role: ChatRole
+  content: string
+}
+
+export type ChatModelParams = {
+  temperature?: number
+  max_tokens?: number
+  top_p?: number
+  frequency_penalty?: number
+  presence_penalty?: number
+  seed?: number
+  stop?: string | string[]
+}
+
+export type ChatResponseFormatJsonSchema = {
+  type: 'json_schema'
+  json_schema: {
+    name: string
+    strict: true
+    schema: Record<string, unknown>
+  }
+}
+
+export type ChatCompletionRequest = {
+  systemMessage?: string
+  history?: ChatMessage[]
+  userMessage: string
+  model?: string
+  params?: ChatModelParams
+  response_format?: ChatResponseFormatJsonSchema
+}
+
+export type ChatCompletionResponseData = {
+  text: string
+  structured?: unknown
+  requestId?: string
+}
+
+// -----------------------------------------------------------------------------
 // Presets
 // -----------------------------------------------------------------------------
 

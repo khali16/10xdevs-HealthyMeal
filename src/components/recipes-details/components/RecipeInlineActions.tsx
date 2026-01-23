@@ -3,6 +3,7 @@ import { RecipeFavoriteToggle } from './RecipeFavoriteToggle'
 import { RecipeRatingControl } from './RecipeRatingControl'
 
 type RecipeInlineActionsProps = {
+  recipeId: string
   rating: number | null
   isFavorite: boolean
   ratingPending: boolean
@@ -15,6 +16,7 @@ type RecipeInlineActionsProps = {
 }
 
 export function RecipeInlineActions({
+  recipeId,
   rating,
   isFavorite,
   ratingPending,
@@ -38,7 +40,11 @@ export function RecipeInlineActions({
         isPending={favoritePending}
         onChange={onToggleFavorite}
       />
-      <RecipeAdjustButton open={adjustOpen} onOpenChange={onAdjustOpenChange} />
+      <RecipeAdjustButton
+        recipeId={recipeId}
+        open={adjustOpen}
+        onOpenChange={onAdjustOpenChange}
+      />
     </div>
   )
 }

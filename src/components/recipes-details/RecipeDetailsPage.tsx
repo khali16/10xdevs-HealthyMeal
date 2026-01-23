@@ -296,6 +296,7 @@ export default function RecipeDetailsPage({ recipeId }: RecipeDetailsPageProps) 
         </Alert>
       ) : null}
       <RecipeInlineActions
+        recipeId={recipe.id}
         rating={recipe.rating}
         isFavorite={recipe.isFavorite}
         ratingPending={ratingPending}

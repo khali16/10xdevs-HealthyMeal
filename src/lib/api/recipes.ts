@@ -8,6 +8,8 @@ import type {
   RecipeDTO,
   RecipeFavoriteDTO,
   RecipeRatingDTO,
+  StartAIAdjustmentCommand,
+  StartAIAdjustmentResponse,
 } from '@/types'
 import type { RecipesListQuery } from '@/components/recipes/types'
 
@@ -15,6 +17,12 @@ type RecipesListResponse = { data: RecipeDTO[]; meta: ApiListMeta }
 type RecipeResponse = { data: RecipeDTO }
 type RecipeRatingResponse = { data: RecipeRatingDTO }
 type RecipeFavoriteResponse = { data: RecipeFavoriteDTO }
+type StartAIAdjustmentApiResponse = {
+  data: StartAIAdjustmentResponse & {
+    adjusted_recipe_id?: string
+    adjusted_recipe?: RecipeDTO | null
+  }
+}
 
 export type ApiMappedError = { code?: string; message: string; fieldErrors?: Record<string, string[]> }
 
@@ -82,6 +90,39 @@ export async function getRecipeById(
   }
 
   return typed
+}
+
+export async function startRecipeAIAdjustment(
+  id: string,
+  cmd: StartAIAdjustmentCommand,
+): Promise<StartAIAdjustmentApiResponse['data']> {
+  const res = await fetch(`/api/recipes/${id}/ai-adjustments`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify(cmd),
+  })
+
+  let payload: unknown
+  try {
+    payload = await res.json()
+  } catch {
+    throw DEFAULT_ERROR
+  }
+
+  if (!res.ok) {
+    let err = mapApiError(payload)
+    if (res.status === 404) {
+      err = { ...err, code: err.code ?? 'NOT_FOUND' }
+    }
+    throw err
+  }
+
+  const typed = payload as StartAIAdjustmentApiResponse
+  if (!typed?.data?.job_id) {
+    throw DEFAULT_ERROR
+  }
+
+  return typed.data
 }
 
 export async function putRecipeRating(
