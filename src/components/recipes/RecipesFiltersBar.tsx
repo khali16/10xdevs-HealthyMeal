@@ -37,6 +37,7 @@ export const RecipesFiltersBar: React.FC<Props> = ({ filters, onChange, onClear 
       role="search"
       aria-label="Filtry przepisów"
       className="flex flex-col gap-4 rounded-lg border bg-card p-4"
+      data-testid="recipes-filters-bar"
     >
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-2">
@@ -46,13 +47,14 @@ export const RecipesFiltersBar: React.FC<Props> = ({ filters, onChange, onClear 
             placeholder="np. kurczak, makaron"
             value={filters.q}
             onChange={(e) => onChange({ q: e.target.value })}
+            data-testid="filter-search-input"
           />
         </div>
 
         <div className="space-y-2">
           <Label>Preferencja diety</Label>
           <Select value={filters.diet ?? ''} onValueChange={(value) => onChange({ diet: value || null })}>
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="w-full" data-testid="filter-diet-select">
               <SelectValue placeholder="Dowolna" />
             </SelectTrigger>
             <SelectContent>
@@ -73,6 +75,7 @@ export const RecipesFiltersBar: React.FC<Props> = ({ filters, onChange, onClear 
             min={0}
             value={filters.max_calories ?? ''}
             onChange={(e) => handleNumberChange('max_calories')(e.target.value)}
+            data-testid="filter-max-calories-input"
           />
         </div>
 
@@ -85,6 +88,7 @@ export const RecipesFiltersBar: React.FC<Props> = ({ filters, onChange, onClear 
             min={0}
             value={filters.max_total_time ?? ''}
             onChange={(e) => handleNumberChange('max_total_time')(e.target.value)}
+            data-testid="filter-max-time-input"
           />
         </div>
       </div>
@@ -96,11 +100,12 @@ export const RecipesFiltersBar: React.FC<Props> = ({ filters, onChange, onClear 
             checked={filters.favorite}
             onCheckedChange={(checked) => onChange({ favorite: checked })}
             aria-label="Tylko ulubione"
+            data-testid="filter-favorite-switch"
           />
           <Label htmlFor="favorite">Tylko ulubione</Label>
         </div>
         {onClear && (
-          <Button type="button" variant="ghost" onClick={onClear}>
+          <Button type="button" variant="ghost" onClick={onClear} data-testid="filter-clear-button">
             Wyczyść filtry
           </Button>
         )}

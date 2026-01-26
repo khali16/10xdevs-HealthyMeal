@@ -24,7 +24,7 @@ export function RecipeDetailsHeader({
   return (
     <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="space-y-3">
-        <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
+        <h1 className="text-3xl font-semibold tracking-tight" data-testid="recipe-details-title">{title}</h1>
         <div className="flex flex-wrap gap-2">
           {tags.diet ? <Badge variant="secondary">Dieta: {tags.diet}</Badge> : null}
           {rating != null ? (

@@ -16,12 +16,13 @@ export const RecipeCard: React.FC<Props> = ({ item, onOpen, onToggleFavorite }) 
   const handleToggleFavorite = () => onToggleFavorite?.(item.id, !item.isFavorite)
 
   return (
-    <Card className="group h-full transition hover:shadow-md">
+    <Card className="group h-full transition hover:shadow-md" data-testid={`recipe-card-${item.id}`}>
       <CardHeader className="flex flex-row items-start justify-between gap-2">
         <CardTitle>
           <button
             onClick={handleOpen}
             className="text-left text-base font-semibold leading-tight text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            data-testid={`recipe-card-title-${item.id}`}
           >
             {item.title}
           </button>
@@ -33,6 +34,7 @@ export const RecipeCard: React.FC<Props> = ({ item, onOpen, onToggleFavorite }) 
           onClick={handleToggleFavorite}
           aria-pressed={item.isFavorite}
           aria-label={item.isFavorite ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}
+          data-testid={`recipe-card-favorite-${item.id}`}
         >
           <Star className={item.isFavorite ? 'fill-yellow-400 text-yellow-500' : 'text-muted-foreground'} />
         </Button>

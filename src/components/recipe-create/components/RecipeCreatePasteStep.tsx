@@ -18,19 +18,27 @@ export const RecipeCreatePasteStep: React.FC<RecipeCreatePasteStepProps> = ({
   onNext,
 }) => {
   const hintId = React.useId()
+  const handleRawChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    onRawChange(event.target.value)
+  }
+  const handleRawInput = (event: React.FormEvent<HTMLTextAreaElement>) => {
+    onRawChange(event.currentTarget.value)
+  }
 
   return (
-    <section className="rounded-lg border bg-card p-4 sm:p-6">
+    <section className="rounded-lg border bg-card p-4 sm:p-6" data-testid="recipe-paste-step">
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
           <Label htmlFor="recipe-raw">Wklej przepis</Label>
           <Textarea
             id="recipe-raw"
             value={raw}
-            onChange={(event) => onRawChange(event.target.value)}
+            onChange={handleRawChange}
+            onInput={handleRawInput}
             placeholder="Wklej tutaj pełny tekst przepisu..."
             rows={10}
             aria-describedby={hintId}
+            data-testid="recipe-raw-input"
           />
           <p id={hintId} className="text-sm text-muted-foreground">
             Wklej pełny przepis, a w kolejnym kroku uzupełnisz tytuł, składniki i kroki.

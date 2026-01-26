@@ -9,7 +9,7 @@ type RecipeCreateStepActionsProps = {
 export const RecipeCreateStepActions: React.FC<RecipeCreateStepActionsProps> = ({ canNext, onNext }) => {
   return (
     <div className="flex justify-end">
-      <Button type="button" onClick={onNext} disabled={!canNext}>
+      <Button type="button" onClick={onNext} disabled={!canNext} data-testid="recipe-paste-next-button">
         Dalej
       </Button>
     </div>

@@ -17,15 +17,15 @@ export const RecipesPagination: React.FC<Props> = ({ meta, isLoading, onPageChan
   const nextDisabled = !has_next || isLoading
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border bg-card/50 p-4 sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-sm text-muted-foreground">
+    <div className="flex flex-col gap-3 rounded-lg border bg-card/50 p-4 sm:flex-row sm:items-center sm:justify-between" data-testid="recipes-pagination">
+      <p className="text-sm text-muted-foreground" data-testid="recipes-pagination-info">
         {total != null ? `${from}–${Math.min(to, total)} z ${total}` : `Strona ${page}`}
       </p>
       <div className="flex gap-2">
-        <Button variant="outline" disabled={prevDisabled} onClick={() => onPageChange(page - 1)}>
+        <Button variant="outline" disabled={prevDisabled} onClick={() => onPageChange(page - 1)} data-testid="recipes-pagination-prev">
           Poprzednia
         </Button>
-        <Button variant="outline" disabled={nextDisabled} onClick={() => onPageChange(page + 1)}>
+        <Button variant="outline" disabled={nextDisabled} onClick={() => onPageChange(page + 1)} data-testid="recipes-pagination-next">
           Następna
         </Button>
       </div>

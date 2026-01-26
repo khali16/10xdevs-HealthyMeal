@@ -17,7 +17,7 @@ export const RecipesGrid: React.FC<Props> = ({
   onToggleFavorite,
 }) => {
   return (
-    <section aria-label="Lista przepisów" className="space-y-4">
+    <section aria-label="Lista przepisów" className="space-y-4" data-testid="recipes-grid">
       <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => (
           <li key={item.id} className="h-full">
@@ -27,7 +27,7 @@ export const RecipesGrid: React.FC<Props> = ({
         {isLoading &&
           Array.from({ length: Math.max(6 - items.length, 3) }).map((_, idx) => (
             <li key={`skeleton-${idx}`} className="h-full">
-              <div className="flex h-full flex-col gap-3 rounded-lg border bg-card p-4">
+              <div className="flex h-full flex-col gap-3 rounded-lg border bg-card p-4" data-testid="recipe-card-skeleton">
                 <Skeleton className="h-5 w-2/3" />
                 <Skeleton className="h-4 w-1/2" />
                 <Skeleton className="h-4 w-full" />

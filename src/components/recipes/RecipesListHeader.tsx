@@ -44,7 +44,7 @@ export const RecipesListHeader: React.FC<Props> = ({ sort, onSortChange, onCreat
         <Button onClick={handleEditPreferences} variant="secondary">
           Edytuj preferencje
         </Button>
-        <Button onClick={onCreateNew} variant="default">
+        <Button onClick={onCreateNew} variant="default" data-testid="create-new-recipe-button">
           Nowy przepis
         </Button>
       </div>

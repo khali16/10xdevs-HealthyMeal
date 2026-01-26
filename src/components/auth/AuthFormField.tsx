@@ -38,11 +38,12 @@ export const AuthFormField = <TFieldValues extends FieldValues>({
           <FormControl>
             <Input
               {...field}
-              value={field.value ?? ''}
               type={type}
               placeholder={placeholder}
               autoComplete={autoComplete}
               disabled={disabled}
+              value={field.value ?? ''}
+              data-testid={`auth-input-${name}`}
             />
           </FormControl>
           {description ? <FormDescription>{description}</FormDescription> : null}

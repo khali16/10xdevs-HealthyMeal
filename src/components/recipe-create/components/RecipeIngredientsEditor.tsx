@@ -21,7 +21,7 @@ export const RecipeIngredientsEditor: React.FC<RecipeIngredientsEditorProps> = (
   error,
 }) => {
   return (
-    <fieldset className="rounded-lg border border-dashed p-4">
+    <fieldset className="rounded-lg border border-dashed p-4" data-testid="recipe-ingredients-editor">
       <legend className="px-2 text-sm font-medium">Składniki</legend>
       {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
       <div className="mt-3 flex flex-col gap-4">

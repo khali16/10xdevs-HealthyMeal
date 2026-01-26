@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro'
 import { z } from 'zod'
-import { DEFAULT_USER_ID, getSupabaseServiceRoleClient } from '@/db/supabase.client'
+import { supabaseClient } from '@/db/supabase.client'
 import { getRecipeById } from '@/lib/services/recipes.service'
 import { getByUserId } from '@/lib/services/user-preferences.service'
 import { OpenRouterService } from '@/lib/openrouter/OpenRouterService'
@@ -22,30 +22,28 @@ export const POST: APIRoute = async ({ params, locals, request }) => {
   }
 
   let supabase = locals.supabase
-  let userId: string | null = null
+  let userId: string | null = locals.user?.id ?? null
 
   const authHeader = request.headers.get('Authorization')
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.substring(7)
-    const { data: { user }, error } = await supabase.auth.getUser(token)
+    const { data: { user }, error } = await supabaseClient.auth.getUser(token)
 
     if (!error && user) {
       userId = user.id
+      supabase = supabaseClient
     } else {
       return new Response(
         JSON.stringify({ error: { code: 'UNAUTHORIZED', message: 'Invalid or expired token' } } as ApiError),
         { status: 401, headers: jsonHeaders },
       )
     }
-  } else {
-    supabase = getSupabaseServiceRoleClient()
-    userId = DEFAULT_USER_ID
   }
 
-  if (!userId || userId === '00000000-0000-0000-0000-000000000000') {
+  if (!userId) {
     return new Response(
-      JSON.stringify({ error: { code: 'INTERNAL', message: 'Missing DEFAULT_USER_ID' } } as ApiError),
-      { status: 500, headers: jsonHeaders },
+      JSON.stringify({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } } as ApiError),
+      { status: 401, headers: jsonHeaders },
     )
   }
 

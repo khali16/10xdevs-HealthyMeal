@@ -110,7 +110,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ returnTo, prefillEmail }) => {
   }, [returnTo])
 
   return (
-    <section className="mx-auto flex w-full max-w-md flex-col gap-6 px-4 py-12 sm:px-6">
+    <section className="mx-auto flex w-full max-w-md flex-col gap-6 px-4 py-12 sm:px-6" data-testid="login-page">
       <AuthCard
         title="Zaloguj się"
         description="Wprowadź adres email i hasło, aby kontynuować."
@@ -131,9 +131,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ returnTo, prefillEmail }) => {
         ) : null}
 
         <Form {...form}>
-          <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+          <form className="flex flex-col gap-4" onSubmit={handleSubmit} data-testid="login-form">
             {apiError ? (
-              <Alert variant="destructive">
+              <Alert variant="destructive" data-testid="login-error-alert">
                 <AlertTitle>Nie udało się zalogować</AlertTitle>
                 <AlertDescription>{apiError.message}</AlertDescription>
               </Alert>
@@ -167,12 +167,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ returnTo, prefillEmail }) => {
               variant="outline"
               onClick={handleGoogleLogin}
               disabled={form.formState.isSubmitting || isOauthLoading}
+              data-testid="login-google-button"
             >
               {isOauthLoading ? 'Łączenie z Google...' : 'Zaloguj się z Google'}
             </Button>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <Button type="submit" disabled={isSubmitDisabled}>
+              <Button type="submit" disabled={isSubmitDisabled} data-testid="login-submit-button">
                 {form.formState.isSubmitting ? 'Logowanie...' : 'Zaloguj się'}
               </Button>
               <Button asChild variant="link" size="sm" className="px-0">

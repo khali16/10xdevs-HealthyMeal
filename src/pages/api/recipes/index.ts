@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro'
 import { createRecipeCommandSchema } from '@/lib/validation/recipes'
 import { createRecipe, listRecipes, type RecipeSort } from '@/lib/services/recipes.service'
-import { DEFAULT_USER_ID, getSupabaseServiceRoleClient, supabaseClient } from '@/db/supabase.client'
+import { supabaseClient } from '@/db/supabase.client'
 import type { ApiError, ApiListMeta } from '@/types'
 
 export const prerender = false
@@ -9,7 +9,8 @@ export const prerender = false
 export const POST: APIRoute = async (context) => {
   // Try to get authenticated user from JWT token
   let supabase = context.locals.supabase
-  let userId: string | null = null
+  let userId: string | null = context.locals.user?.id ?? null
+  let userEmail: string | null = context.locals.user?.email ?? null
 
   const authHeader = context.request.headers.get('Authorization')
   if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -19,6 +20,7 @@ export const POST: APIRoute = async (context) => {
     
     if (!error && user) {
       userId = user.id
+      userEmail = user.email ?? null
       // Create authenticated client for this user
       supabase = supabaseClient
     } else {
@@ -29,25 +31,20 @@ export const POST: APIRoute = async (context) => {
         { status: 401, headers: { 'Content-Type': 'application/json' } },
       )
     }
-  } else {
-    // No auth header - use service role for development (bypasses RLS)
-    supabase = getSupabaseServiceRoleClient()
-    userId = DEFAULT_USER_ID
   }
 
-  if (!userId || userId === '00000000-0000-0000-0000-000000000000') {
+  if (!userId) {
     return new Response(
       JSON.stringify(<ApiError>{
-        error: { code: 'INTERNAL', message: 'Missing user ID' },
+        error: { code: 'UNAUTHORIZED', message: 'Unauthorized' },
       }),
-      { status: 500 },
+      { status: 401, headers: { 'Content-Type': 'application/json' } },
     )
   }
 
   // Ensure user exists in public.users table
   // This is necessary because recipes table has a foreign key to users table
-  const serviceRoleClient = getSupabaseServiceRoleClient()
-  const { data: existingUser, error: userCheckError } = await serviceRoleClient
+  const { data: existingUser, error: userCheckError } = await supabase
     .from('users')
     .select('id')
     .eq('id', userId)
@@ -64,51 +61,32 @@ export const POST: APIRoute = async (context) => {
   }
 
   if (!existingUser) {
-    // User doesn't exist in public.users, try to sync from auth.users
-    let authUser = null
-    try {
-      const { data: authData, error: authError } = await serviceRoleClient.auth.admin.getUserById(userId)
-      if (!authError && authData?.user) {
-        authUser = authData.user
-      }
-    } catch (e) {
-      console.error('Error fetching auth user:', e)
-    }
-
-    if (authUser) {
-      // Create user in public.users from auth.users data
-      const { error: createUserError } = await serviceRoleClient
-        .from('users')
-        .insert({
-          id: authUser.id,
-          email: authUser.email || '',
-          password_hash: '$2a$10$placeholder_hash_auth_managed',
-          is_active: true,
-          created_at: authUser.created_at || new Date().toISOString(),
-        })
-
-      if (createUserError) {
-        console.error('Error creating user in public.users:', createUserError)
-        return new Response(
-          JSON.stringify(<ApiError>{
-            error: {
-              code: 'INTERNAL',
-              message: `User with ID ${userId} does not exist in public.users table and failed to sync from auth.users. Please run the sync migration or create the user manually.`,
-            },
-          }),
-          { status: 500 },
-        )
-      }
-    } else {
-      // User doesn't exist in auth.users either
+    if (!userEmail) {
       return new Response(
         JSON.stringify(<ApiError>{
-          error: {
-            code: 'NOT_FOUND',
-            message: `User with ID ${userId} does not exist. Please ensure the user exists in the users table.`,
-          },
+          error: { code: 'BAD_REQUEST', message: 'Missing user email' },
         }),
-        { status: 404 },
+        { status: 400 },
+      )
+    }
+
+    const { error: createUserError } = await supabase
+      .from('users')
+      .insert({
+        id: userId,
+        email: userEmail,
+        password_hash: '$2a$10$placeholder_hash_auth_managed',
+        is_active: true,
+        created_at: new Date().toISOString(),
+      })
+
+    if (createUserError) {
+      console.error('Error creating user in public.users:', createUserError)
+      return new Response(
+        JSON.stringify(<ApiError>{
+          error: { code: 'INTERNAL', message: 'Failed to create user record' },
+        }),
+        { status: 500 },
       )
     }
   }
@@ -163,7 +141,7 @@ export const POST: APIRoute = async (context) => {
 export const GET: APIRoute = async (context) => {
   // Try to get authenticated user from JWT token
   let supabase = context.locals.supabase
-  let userId: string | null = null
+  let userId: string | null = context.locals.user?.id ?? null
 
   const authHeader = context.request.headers.get('Authorization')
   if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -181,18 +159,14 @@ export const GET: APIRoute = async (context) => {
         { status: 401, headers: { 'Content-Type': 'application/json' } },
       )
     }
-  } else {
-    // No auth header - use service role to bypass RLS for development
-    supabase = getSupabaseServiceRoleClient()
-    userId = DEFAULT_USER_ID
   }
 
-  if (!userId || userId === '00000000-0000-0000-0000-000000000000') {
+  if (!userId) {
     return new Response(
       JSON.stringify(<ApiError>{
-        error: { code: 'INTERNAL', message: 'Missing DEFAULT_USER_ID' },
+        error: { code: 'UNAUTHORIZED', message: 'Unauthorized' },
       }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
+      { status: 401, headers: { 'Content-Type': 'application/json' } },
     )
   }
 

@@ -279,7 +279,7 @@ export default function RecipeDetailsPage({ recipeId }: RecipeDetailsPageProps) 
   }
 
   return (
-    <section className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+    <section className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6 lg:px-8" data-testid="recipe-details-page">
       <RecipeDetailsHeader
         title={recipe.title}
         tags={recipe.tags}

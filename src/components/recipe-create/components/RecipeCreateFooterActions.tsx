@@ -16,10 +16,10 @@ export const RecipeCreateFooterActions: React.FC<RecipeCreateFooterActionsProps>
 }) => {
   return (
     <div className="flex flex-wrap gap-3">
-      <Button type="button" variant="outline" onClick={onBack} disabled={isSaving}>
+      <Button type="button" variant="outline" onClick={onBack} disabled={isSaving} data-testid="recipe-back-button">
         Wstecz
       </Button>
-      <Button type="button" onClick={onSave} disabled={isSaving || isSaveDisabled}>
+      <Button type="button" onClick={onSave} disabled={isSaving || isSaveDisabled} data-testid="recipe-save-button">
         {isSaving ? 'Zapisywanie...' : 'Zapisz'}
       </Button>
     </div>

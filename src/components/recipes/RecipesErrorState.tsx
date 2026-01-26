@@ -9,14 +9,14 @@ type Props = {
 
 export const RecipesErrorState: React.FC<Props> = ({ message, onRetry }) => {
   return (
-    <div className="rounded-lg border bg-card/50 p-6">
+    <div className="rounded-lg border bg-card/50 p-6" data-testid="recipes-error-state">
       <Alert variant="destructive">
         <AlertTitle>Wystąpił błąd</AlertTitle>
         <AlertDescription className="flex flex-col gap-3">
           {message ?? 'Coś poszło nie tak. Spróbuj ponownie.'}
           {onRetry && (
             <div>
-              <Button variant="destructive" onClick={onRetry}>
+              <Button variant="destructive" onClick={onRetry} data-testid="recipes-error-retry-button">
                 Spróbuj ponownie
               </Button>
             </div>

@@ -46,7 +46,7 @@ export const RecipeCreateReviewStep: React.FC<RecipeCreateReviewStepProps> = ({
   canSave,
 }) => {
   return (
-    <section className="rounded-lg border bg-card p-4 sm:p-6">
+    <section className="rounded-lg border bg-card p-4 sm:p-6" data-testid="recipe-review-step">
       <div className="flex flex-col gap-2">
         <h2 className="text-lg font-semibold">Podgląd i edycja</h2>
         {draft.raw.trim() && (

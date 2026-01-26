@@ -1,9 +1,5 @@
 import type { APIRoute } from 'astro'
-import {
-  DEFAULT_USER_ID,
-  getSupabaseServiceRoleClient,
-  supabaseClient,
-} from '@/db/supabase.client'
+import { supabaseClient } from '@/db/supabase.client'
 import { getRecipeById } from '@/lib/services/recipes.service'
 import { setFavorite } from '@/lib/services/favorites.service'
 import { putRecipeFavoriteCommandSchema } from '@/lib/validation/recipes'
@@ -13,7 +9,7 @@ export const prerender = false
 
 /**
  * PUT /api/recipes/[id]/favorite
- * Sets or removes a favorite flag for a recipe by the default user.
+ * Sets or removes a favorite flag for a recipe by the current user.
  */
 export const PUT: APIRoute = async ({ params, locals, request }) => {
   const id = params.id
@@ -26,7 +22,7 @@ export const PUT: APIRoute = async ({ params, locals, request }) => {
 
   // Try to get authenticated user from JWT token
   let supabase = locals.supabase
-  let userId: string | null = null
+  let userId: string | null = locals.user?.id ?? null
 
   const authHeader = request.headers.get('Authorization')
   if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -42,16 +38,12 @@ export const PUT: APIRoute = async ({ params, locals, request }) => {
         { status: 401, headers: { 'Content-Type': 'application/json' } },
       )
     }
-  } else {
-    // No auth header - use service role to bypass RLS for development
-    supabase = getSupabaseServiceRoleClient()
-    userId = DEFAULT_USER_ID
   }
 
-  if (!userId || userId === '00000000-0000-0000-0000-000000000000') {
+  if (!userId) {
     return new Response(
-      JSON.stringify({ error: { code: 'INTERNAL', message: 'Missing DEFAULT_USER_ID' } } as ApiError),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
+      JSON.stringify({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } } as ApiError),
+      { status: 401, headers: { 'Content-Type': 'application/json' } },
     )
   }
 

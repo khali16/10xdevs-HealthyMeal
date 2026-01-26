@@ -28,6 +28,7 @@ export const RecipeTitleField: React.FC<RecipeTitleFieldProps> = ({
         onChange={(event) => onChange(event.target.value)}
         placeholder="np. Klasyczne naleśniki"
         aria-invalid={Boolean(error)}
+        data-testid="recipe-title-input"
       />
       {error && <p className="text-sm text-destructive">{error}</p>}
     </div>

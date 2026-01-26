@@ -8,7 +8,7 @@ type Props = {
 
 export const RecipesEmptyState: React.FC<Props> = ({ onCreateNew }) => {
   return (
-    <div className="rounded-lg border bg-card/50 p-6">
+    <div className="rounded-lg border bg-card/50 p-6" data-testid="recipes-empty-state">
       <Alert>
         <AlertTitle>Brak przepisów</AlertTitle>
         <AlertDescription className="flex flex-col gap-3">

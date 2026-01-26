@@ -1,10 +1,6 @@
 import type { APIRoute } from 'astro'
 import { getRecipeById, patchRecipe } from '@/lib/services/recipes.service'
-import {
-  DEFAULT_USER_ID,
-  getSupabaseServiceRoleClient,
-  supabaseClient,
-} from '@/db/supabase.client'
+import { supabaseClient } from '@/db/supabase.client'
 import { patchRecipeCommandSchema } from '@/lib/validation/recipes'
 import type { ApiError } from '@/types'
 
@@ -21,7 +17,7 @@ export const GET: APIRoute = async ({ params, locals, request }) => {
 
   // Try to get authenticated user from JWT token
   let supabase = locals.supabase
-  let userId: string | null = null
+  let userId: string | null = locals.user?.id ?? null
 
   const authHeader = request.headers.get('Authorization')
   if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -37,16 +33,12 @@ export const GET: APIRoute = async ({ params, locals, request }) => {
         { status: 401, headers: { 'Content-Type': 'application/json' } },
       )
     }
-  } else {
-    // No auth header - use service role to bypass RLS for development
-    supabase = getSupabaseServiceRoleClient()
-    userId = DEFAULT_USER_ID
   }
 
-  if (!userId || userId === '00000000-0000-0000-0000-000000000000') {
+  if (!userId) {
     return new Response(
-      JSON.stringify({ error: { code: 'INTERNAL', message: 'Missing DEFAULT_USER_ID' } } as ApiError),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
+      JSON.stringify({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } } as ApiError),
+      { status: 401, headers: { 'Content-Type': 'application/json' } },
     )
   }
 
@@ -82,7 +74,7 @@ export const PATCH: APIRoute = async ({ params, locals, request }) => {
 
   // Try to get authenticated user from JWT token
   let supabase = locals.supabase
-  let userId: string | null = null
+  let userId: string | null = locals.user?.id ?? null
 
   const authHeader = request.headers.get('Authorization')
   if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -98,16 +90,12 @@ export const PATCH: APIRoute = async ({ params, locals, request }) => {
         { status: 401, headers: { 'Content-Type': 'application/json' } },
       )
     }
-  } else {
-    // No auth header - use service role to bypass RLS for development
-    supabase = getSupabaseServiceRoleClient()
-    userId = DEFAULT_USER_ID
   }
 
-  if (!userId || userId === '00000000-0000-0000-0000-000000000000') {
+  if (!userId) {
     return new Response(
-      JSON.stringify({ error: { code: 'INTERNAL', message: 'Missing DEFAULT_USER_ID' } } as ApiError),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
+      JSON.stringify({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } } as ApiError),
+      { status: 401, headers: { 'Content-Type': 'application/json' } },
     )
   }
 

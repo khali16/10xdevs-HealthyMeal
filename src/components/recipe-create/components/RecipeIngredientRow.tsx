@@ -29,7 +29,7 @@ export const RecipeIngredientRow: React.FC<RecipeIngredientRowProps> = ({
   }
 
   return (
-    <div className="rounded-md border p-3">
+    <div className="rounded-md border p-3" data-testid={`recipe-ingredient-${index}`}>
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-medium">Składnik {index + 1}</p>
         <RecipeConfidenceBadge confidence={item.confidence ?? null} />
@@ -40,6 +40,7 @@ export const RecipeIngredientRow: React.FC<RecipeIngredientRowProps> = ({
           onChange={(event) => onChange({ text: event.target.value })}
           placeholder="np. mąka pszenna"
           aria-invalid={Boolean(errors?.text)}
+          data-testid={`recipe-ingredient-${index}-text`}
         />
         <Input
           type="number"
@@ -48,12 +49,14 @@ export const RecipeIngredientRow: React.FC<RecipeIngredientRowProps> = ({
           onChange={(event) => handleAmountChange(event.target.value)}
           placeholder="Ilość"
           aria-invalid={Boolean(errors?.amount)}
+          data-testid={`recipe-ingredient-${index}-amount`}
         />
         <Input
           value={item.unit ?? ''}
           onChange={(event) => onChange({ unit: event.target.value })}
           placeholder="g / ml / szt"
           aria-invalid={Boolean(errors?.unit)}
+          data-testid={`recipe-ingredient-${index}-unit`}
         />
         <Button type="button" variant="outline" onClick={onRemove}>
           Usuń

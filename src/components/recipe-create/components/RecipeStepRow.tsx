@@ -20,7 +20,7 @@ export const RecipeStepRow: React.FC<RecipeStepRowProps> = ({
   error,
 }) => {
   return (
-    <div className="rounded-md border p-3">
+    <div className="rounded-md border p-3" data-testid={`recipe-step-${index}`}>
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-medium">Krok {index + 1}</p>
         <RecipeConfidenceBadge confidence={item.confidence ?? null} />
@@ -32,6 +32,7 @@ export const RecipeStepRow: React.FC<RecipeStepRowProps> = ({
         placeholder="Opisz krok przygotowania..."
         rows={2}
         aria-invalid={Boolean(error)}
+        data-testid={`recipe-step-${index}-text`}
       />
       <div className="mt-2 flex items-center justify-between gap-3">
         {error ? <p className="text-sm text-destructive">{error}</p> : <span />}
