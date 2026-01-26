@@ -14,8 +14,15 @@ const { title } = Astro.props
   <div class="flex min-h-screen flex-col bg-background text-foreground">
     <header class="border-b bg-background">
       <div class="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-        <a href="/" class="text-lg font-semibold">
-          HealthyMeal
+        <a href="/recipes" class="flex items-center gap-2 text-lg font-semibold text-foreground">
+          <img
+            src="/favicon.png"
+            alt="HealthyMeal logo"
+            class="h-8 w-8"
+            loading="lazy"
+            decoding="async"
+          />
+          <span>HealthyMeal</span>
         </a>
         <nav class="flex items-center gap-3 text-sm text-muted-foreground">
           <a class="transition-colors hover:text-foreground" href="/auth/login">Zaloguj</a>

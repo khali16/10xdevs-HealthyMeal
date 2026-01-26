@@ -43,6 +43,7 @@ Further details: see the PRD at `./.ai/prd.md`.
 - **AI**: OpenRouter.ai (access to multiple model providers with budget controls)
 - **CI/CD & Hosting**: GitHub Actions (CI/CD), DigitalOcean (Docker image hosting)
 - **Tooling**: ESLint, Prettier, TypeScript, Husky + lint-staged
+- **Testing**: Vitest (unit/integration), React Testing Library (component), Playwright (E2E)
 
 Reference: `./.ai/tech-stack.md`
 
@@ -117,6 +118,7 @@ A modern, opinionated starter template for building fast, accessible, and AI-fri
 - [React](https://react.dev/) v19.0.0 - UI library for building interactive components
 - [TypeScript](https://www.typescriptlang.org/) v5 - Type-safe JavaScript
 - [Tailwind CSS](https://tailwindcss.com/) v4.0.17 - Utility-first CSS framework
+- Testing: Vitest, React Testing Library, Playwright (E2E)
 
 ## Prerequisites
 
@@ -157,6 +159,13 @@ npm run build
 - `npm run preview` - Preview production build
 - `npm run lint` - Run ESLint
 - `npm run lint:fix` - Fix ESLint issues
+- `npm run test:unit` - Run unit/component tests (Vitest)
+- `npm run test:unit:watch` - Run unit/component tests in watch mode
+- `npm run test:unit:ui` - Run Vitest UI
+- `npm run test:e2e:install` - Install Playwright Chromium browser (required once per machine)
+- `npm run test:e2e` - Run E2E tests (Playwright, Chromium only)
+- `npm run test:e2e:ui` - Run Playwright UI mode
+- `npm run test` - Run unit tests, then E2E
 
 ## Project Structure
 
@@ -168,6 +177,7 @@ npm run build
 │ │ └── api/ # API endpoints
 │ ├── components/ # UI components (Astro & React)
 │ └── assets/ # Static assets
+├── e2e/ # Playwright E2E tests (Page Object Model)
 ├── public/ # Public assets
 ```
 

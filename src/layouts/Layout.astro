@@ -38,18 +38,30 @@ const userEmail = user?.email ?? null
   <body>
     {
       isAuthenticated ? (
-        <div class="border-b bg-background">
+        <header class="border-b bg-background">
           <div class="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-            <span class="text-sm text-muted-foreground">
-              Zalogowano jako <span class="font-medium text-foreground">{userEmail}</span>
-            </span>
-            <form method="post" action="/api/auth/logout">
-              <button class="text-sm font-medium text-foreground transition-colors hover:text-primary">
-                Wyloguj
-              </button>
-            </form>
+            <a class="flex items-center gap-2 text-base font-semibold text-foreground" href="/recipes">
+              <img
+                src="/favicon.png"
+                alt="HealthyMeal logo"
+                class="h-7 w-7"
+                loading="lazy"
+                decoding="async"
+              />
+              <span>HealthyMeal</span>
+            </a>
+            <div class="flex items-center gap-4">
+              <span class="text-sm text-muted-foreground">
+                Zalogowano jako <span class="font-medium text-foreground">{userEmail}</span>
+              </span>
+              <form method="post" action="/api/auth/logout">
+                <button class="text-sm font-medium text-foreground transition-colors hover:text-primary">
+                  Wyloguj
+                </button>
+              </form>
+            </div>
           </div>
-        </div>
+        </header>
       ) : null
     }
     <slot />
