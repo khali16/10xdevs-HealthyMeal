@@ -33,7 +33,10 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run dev",
+    // In CI we want to validate the production build, not the dev server.
+    command: process.env.CI
+      ? "npm run preview -- --port 3000"
+      : "npm run dev",
     port: 3000,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
