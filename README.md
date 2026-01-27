@@ -1,4 +1,4 @@
-### HealthyMeal
+### HealthyMeal for 10xDevs
 
 Modern web app that helps users adapt recipes to individual dietary needs with AI assistance. The MVP focuses on private recipe CRUD, a quick dietary preferences profile, and a single "Adjust Recipe" AI action with diff preview and post-AI safety validation.
 
