@@ -7,7 +7,6 @@ import type {
   AllergenDictionaryAuditRow,
   CreateAllergenCommand,
   PatchAllergenCommand,
-  ApiListMeta,
 } from '@/types';
 
 type PostgrestErrorShape = {

@@ -1,0 +1,171 @@
+name: Pull Request CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: pr-ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (ESLint)
+        run: npm run lint
+
+  unit-test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [lint]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests (Vitest) + coverage
+        run: npm run test:unit:coverage
+
+      - name: Upload unit coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-unit
+          path: coverage/unit/
+          if-no-files-found: error
+
+  e2e-test:
+    name: E2E tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [lint]
+    environment: integration
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      E2E_USERNAME: ${{ secrets.E2E_USERNAME }}
+      E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers (from config)
+        run: npx playwright install --with-deps chromium
+
+      - name: Validate required secrets are provided
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_KEY" ]; then
+            echo "Missing Supabase config. Configure repository secrets SUPABASE_URL and SUPABASE_KEY."
+            exit 1
+          fi
+          if [ -z "$E2E_USERNAME" ] || [ -z "$E2E_PASSWORD" ]; then
+            echo "Missing E2E credentials. Configure repository secrets E2E_USERNAME and E2E_PASSWORD."
+            exit 1
+          fi
+
+      - name: Build (Astro) - integration mode
+        run: npm run build -- --mode integration
+
+      - name: E2E tests (Playwright against preview) + coverage
+        run: npm run test:e2e
+
+      - name: Upload E2E report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+
+      - name: Upload E2E coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-e2e
+          path: coverage/e2e/
+          if-no-files-found: error
+
+  status-comment:
+    name: Status comment
+    runs-on: ubuntu-latest
+    needs: [lint, unit-test, e2e-test]
+    if: ${{ success() && github.event_name == 'pull_request' }}
+    steps:
+      - name: Comment PR with overall status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = '<!-- healthymeal-ci-status -->';
+            const prNumber = context.payload.pull_request.number;
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            const body = [
+              marker,
+              '## CI status: ✅ all checks passed',
+              '',
+              '- ✅ Lint',
+              '- ✅ Unit tests (+ coverage artifact)',
+              '- ✅ E2E tests (+ coverage artifact)',
+              '',
+              `Run: ${runUrl}`,
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              per_page: 100,
+            });
+
+            const existing = comments.find(c => typeof c.body === 'string' && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+              return;
+            }
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body,
+            });
+

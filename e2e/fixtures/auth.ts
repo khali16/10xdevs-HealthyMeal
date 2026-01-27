@@ -1,4 +1,4 @@
-import { test as base } from "@playwright/test";
+import { test as base } from "@bgotink/playwright-coverage";
 import { LoginPage } from "../pages/LoginPage";
 
 type AuthFixtures = {
@@ -13,7 +13,7 @@ export const test = base.extend<AuthFixtures>({
   },
 });
 
-export { expect } from "@playwright/test";
+export { expect } from "@bgotink/playwright-coverage";
 
 /**
  * Helper function to perform login programmatically in tests

@@ -99,8 +99,8 @@ export const POST: APIRoute = async ({ params, locals, request }) => {
     jobId = job?.id ?? null
 
     const preferences = await getByUserId(supabase, userId)
-    const includeAllergens = parsed.data.parameters.avoid_allergens === true
-    const includeExclusions = parsed.data.parameters.use_exclusions === true
+    const _includeAllergens = parsed.data.parameters.avoid_allergens === true
+    const _includeExclusions = parsed.data.parameters.use_exclusions === true
 
     const service = new OpenRouterService(
       {

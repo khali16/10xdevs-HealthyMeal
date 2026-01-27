@@ -5,9 +5,6 @@
 
 import type {
   Tables,
-  TablesInsert,
-  TablesUpdate,
-  Json,
 } from './db/database.types.ts'
 
 // -----------------------------------------------------------------------------

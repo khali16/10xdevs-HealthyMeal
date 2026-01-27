@@ -12,6 +12,7 @@
     "format": "prettier --write .",
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "vitest run",
+    "test:unit:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text-summary --coverage.reporter=json-summary --coverage.reportsDirectory=coverage/unit",
     "test:unit:watch": "vitest",
     "test:unit:ui": "vitest --ui",
     "test:e2e": "playwright test",
@@ -63,6 +64,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@bgotink/playwright-coverage": "^0.3.2",
     "@eslint/compat": "1.2.7",
     "@eslint/js": "9.23.0",
     "@playwright/test": "^1.58.0",
@@ -71,6 +73,7 @@
     "@testing-library/user-event": "^14.6.1",
     "@typescript-eslint/eslint-plugin": "8.28.0",
     "@typescript-eslint/parser": "8.28.0",
+    "@vitest/coverage-v8": "^4.0.18",
     "@vitest/ui": "^4.0.18",
     "eslint": "9.23.0",
     "eslint-config-prettier": "10.1.1",

@@ -25,7 +25,6 @@ import {
 import { userPreferencesCommandSchema } from '@/lib/validation/user-preferences'
 import { DIET_OPTIONS } from './constants'
 import type {
-  AllergenKey,
   AllergenOptionVM,
   DietKey,
   UserPreferencesFormValues,

@@ -1,3 +1,4 @@
+import { defineCoverageReporterConfig } from "@bgotink/playwright-coverage";
 import { defineConfig, devices } from "@playwright/test";
 import dotenv from "dotenv";
 import path from "node:path";
@@ -13,7 +14,30 @@ export default defineConfig({
   fullyParallel: true,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 2 : undefined,
-  reporter: [["list"], ["html", { open: "never" }]],
+  reporter: [
+    ["list"],
+    ["html", { open: "never" }],
+    [
+      "@bgotink/playwright-coverage",
+      defineCoverageReporterConfig({
+        sourceRoot: process.cwd(),
+        resultDir: path.resolve(process.cwd(), "coverage/e2e"),
+        exclude: [
+          "**/node_modules/**",
+          "**/dist/**",
+          "**/.astro/**",
+          "**/e2e/**",
+          "**/coverage/**",
+        ],
+        reports: [
+          ["html"],
+          ["lcovonly", { file: "lcov.info" }],
+          ["json-summary", { file: "coverage-summary.json" }],
+          ["text-summary", { file: null }],
+        ],
+      }),
+    ],
+  ],
   use: {
     baseURL: "http://localhost:3000",
     trace: "on-first-retry",

@@ -12,7 +12,7 @@ export class RecipeCard {
     this.recipeId = this.extractIdFromLocator(cardLocator);
   }
 
-  private extractIdFromLocator(locator: Locator): string {
+  private extractIdFromLocator(_locator: Locator): string {
     // This is a placeholder - in actual implementation, the ID will be extracted dynamically
     return "";
   }

@@ -1,7 +1,6 @@
 import type { APIRoute } from 'astro';
 import { requireAdmin } from '@/lib/auth';
 import {
-  getAllergenById,
   updateAllergen,
   deleteAllergen,
 } from '@/lib/services/allergens.service';

@@ -1,4 +1,4 @@
-import { test as setup, expect } from "@playwright/test";
+import { test as setup, expect } from "@bgotink/playwright-coverage";
 import { LoginPage } from "./pages/LoginPage";
 
 const authFile = ".auth/user.json";

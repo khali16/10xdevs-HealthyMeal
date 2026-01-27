@@ -1,4 +1,4 @@
-import type { ApiError, ApiSuccess, UpsertUserPreferencesCommand, UserPreferencesDTO } from '@/types'
+import type { ApiError, UpsertUserPreferencesCommand, UserPreferencesDTO } from '@/types'
 
 type UserPreferencesResponse = { data: UserPreferencesDTO }
 
