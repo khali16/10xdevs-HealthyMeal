@@ -12,36 +12,26 @@ const supabaseAnonKey = import.meta.env.SUPABASE_KEY;
 
 export const supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKey);
 
-export const DEFAULT_USER_ID: string =
-  (import.meta.env.SUPABASE_DEFAULT_USER_ID as string | undefined) ?? '00000000-0000-0000-0000-000000000000';
-
-/**
- * Creates a Supabase client with service-role key for admin operations.
- * This client bypasses Row Level Security (RLS) and should only be used server-side
- * in admin endpoints.
- *
- * @returns Service-role Supabase client
- * @throws Error if SUPABASE_SERVICE_ROLE_KEY is not set
- */
-export function getSupabaseServiceRoleClient(): SupabaseClient {
-  const serviceRoleKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!serviceRoleKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set');
+function shouldUseSecureCookies(headers: Headers): boolean {
+  const forwardedProto =
+    headers.get('x-forwarded-proto') ?? headers.get('x-forwarded-protocol');
+  if (forwardedProto) {
+    const first = forwardedProto.split(',')[0]?.trim();
+    if (first === 'https') return true;
+    if (first === 'http') return false;
   }
-  return createClient<Database>(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
-}
 
-export const cookieOptions: CookieOptionsWithName = {
-  path: '/',
-  secure: import.meta.env.PROD,
-  httpOnly: true,
-  sameSite: 'lax',
-};
+  const forwardedSsl = headers.get('x-forwarded-ssl');
+  if (forwardedSsl) return forwardedSsl.toLowerCase() === 'on';
+
+  const host = (headers.get('host') ?? '').toLowerCase();
+  if (host.startsWith('localhost') || host.startsWith('127.0.0.1') || host.startsWith('[::1]')) {
+    return false;
+  }
+
+  // Fallback: in real production deployments we expect HTTPS.
+  return import.meta.env.PROD;
+}
 
 function parseCookieHeader(cookieHeader: string): { name: string; value: string }[] {
   if (!cookieHeader) return [];
@@ -55,6 +45,13 @@ export const createSupabaseServerInstance = (context: {
   headers: Headers;
   cookies: AstroCookies;
 }): SupabaseClient => {
+  const cookieOptions: CookieOptionsWithName = {
+    path: '/',
+    secure: shouldUseSecureCookies(context.headers),
+    httpOnly: true,
+    sameSite: 'lax',
+  };
+
   return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
     cookieOptions,
     cookies: {

@@ -435,20 +435,7 @@ export type AllergenDictionaryAuditRow = Tables<'allergen_dictionary_audit'>
 - **Brak uprawnień**: Zwracanie 403 z komunikatem `{ "error": { "code": "FORBIDDEN", "message": "Admin access required" } }`
 - **Feature flag**: Dodatkowa weryfikacja feature flag dla admin UI (jeśli zaimplementowana)
 
-### 6.2 Service-Role Client
-
-- **Bypass RLS**: Wszystkie operacje na `allergen_dictionary` i `allergen_dictionary_audit` używają service-role klienta Supabase
-- **Tworzenie klienta**: 
-  ```typescript
-  const supabaseServiceRole = createClient(
-    import.meta.env.SUPABASE_URL,
-    import.meta.env.SUPABASE_SERVICE_ROLE_KEY
-  )
-  ```
-- **Bezpieczeństwo**: Service-role key NIGDY nie jest eksponowany do klienta, tylko używany server-side
-- **Ograniczenie dostępu**: Service-role klient używany TYLKO w handlerach admin endpointów
-
-### 6.3 Walidacja danych wejściowych
+### 6.2 Walidacja danych wejściowych
 
 - **Zod schemas**: Walidacja wszystkich danych wejściowych za pomocą schematów Zod
 - **UUID validation**: Walidacja formatu UUID dla `id` w ścieżce
@@ -597,12 +584,7 @@ export type AllergenDictionaryAuditRow = Tables<'allergen_dictionary_audit'>
 
 ### 9.1 Przygotowanie infrastruktury
 
-1. **Utworzenie service-role klienta Supabase**
-   - Dodaj `SUPABASE_SERVICE_ROLE_KEY` do zmiennych środowiskowych
-   - Utwórz helper function `getSupabaseServiceRoleClient()` w `src/db/supabase.client.ts`
-   - Upewnij się, że klucz nie jest eksponowany do klienta
-
-2. **Utworzenie helpera do weryfikacji admin**
+1. **Utworzenie helpera do weryfikacji admin**
    - Utwórz funkcję `requireAdmin(context: APIContext)` w `src/lib/auth.ts` lub podobnym
    - Funkcja powinna:
      - Weryfikować JWT token

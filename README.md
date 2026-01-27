@@ -84,7 +84,7 @@ MVP in active development. Core flows to deliver: authentication and onboarding,
 
 ### API Quickstart
 
-POST /api/recipes (uses DEFAULT_USER_ID for now)
+POST /api/recipes (requires authenticated session)
 
 ```bash
 curl -X POST http://localhost:3000/api/recipes \
@@ -101,7 +101,7 @@ curl -X POST http://localhost:3000/api/recipes \
 ```
 
 Notes:
-- Configure `SUPABASE_URL`, `SUPABASE_KEY`, and optionally `SUPABASE_DEFAULT_USER_ID` in your env. If the default is missing, the endpoint returns 500.
+- Configure `SUPABASE_URL` and `SUPABASE_KEY` in your env.
 - Body size is limited (~256KB) and basic rate limiting applies (middleware).
 
 ### License

@@ -400,10 +400,9 @@ Jeśli produktowo endpoint adminowy ma być używany również w UI użytkownika
 
 ### Nagłówki autoryzacji
 
-Endpoint `/api/user/preferences` wymaga nagłówka:
+Endpoint `/api/user/preferences` wymaga uwierzytelnienia:
+- cookie-based session (SSR), lub
 - `Authorization: Bearer <access_token>`
-
-W przeciwieństwie do części endpointów przepisów, ten endpoint **nie ma** fallbacku na `DEFAULT_USER_ID`, więc bez tokena UI otrzyma 401.
 
 ### Warstwa API po stronie frontendu (propozycja pliku)
 

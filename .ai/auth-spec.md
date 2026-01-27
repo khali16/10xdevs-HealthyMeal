@@ -5,7 +5,6 @@ Dokument opisuje docelową architekturę (bez implementacji) modułu **rejestrac
 Uwzględnia obecny stan aplikacji:
 - Aplikacja jest SSR (`astro.config.mjs`: `output: "server"`, adapter Node standalone).
 - API już używa Supabase i posiada konwencję błędów `ApiError { error: { code, message, fieldErrors? } }`.
-- Część endpointów ma dziś **tryb kompatybilności dev**: gdy brak tokenu, używany jest `DEFAULT_USER_ID` i klient service-role (bypass RLS). Ta specyfikacja **nie narusza** tego zachowania – proponuje kontrolowane wygaszanie poprzez flagę środowiskową.
 
 ---
 
@@ -62,9 +61,6 @@ Istniejące strony (dziś działają bez twardego auth):
 
 Docelowe zachowanie (produkcja):
 - SSR guard: jeśli brak sesji → redirect do `/auth/login?returnTo=<aktualna_ścieżka>`.
-
-Tryb kompatybilności (dev / migracyjny):
-- jeśli brak sesji, ale ustawiona flaga `AUTH_MODE=compat` (lub `AUTH_REQUIRED=false`) → strona pozostaje dostępna jak dziś; API może korzystać z `DEFAULT_USER_ID`.
 
 **Wskazanie SSR/prerender**: dla stron chronionych i auth stron należy jawnie ustawić `export const prerender = false`, aby nie doszło do statycznego wygenerowania stron w buildach.
 
@@ -346,19 +342,6 @@ Docelowo middleware powinien:
 - wystawiać go w `context.locals.supabase` (lub równolegle `supabaseServer`), aby:
   - strony `.astro` mogły robić SSR guardy,
   - endpointy `/api/*` mogły czytać sesję z cookies bez wymogu `Authorization` header.
-
-#### 2.6.2 Kompatybilność z obecnym trybem „bez auth”
-W części endpointów istnieje fallback:
-- brak `Authorization` → `getSupabaseServiceRoleClient()` + `DEFAULT_USER_ID`.
-
-Docelowy plan utrzymania kompatybilności:
-- dodać zmienną środowiskową, np.:
-  - `AUTH_REQUIRED=true|false` (lub `AUTH_MODE=compat|strict`)
-- w trybie `compat`:
-  - endpointy nadal mogą używać `DEFAULT_USER_ID`, aby nie blokować rozwoju UI
-- w trybie `strict` (produkcja):
-  - brak sesji/cookies/tokenu → `401 UNAUTHORIZED`
-  - wyłączyć użycie service-role dla endpointów użytkownika (poza admin i wewnętrznymi operacjami).
 
 ---
 

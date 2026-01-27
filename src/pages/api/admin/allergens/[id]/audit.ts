@@ -1,5 +1,4 @@
 import type { APIRoute } from 'astro';
-import { DEFAULT_USER_ID } from '@/db/supabase.client';
 import {
   getAllergenById,
   getAllergenAudit,
@@ -19,15 +18,7 @@ export const prerender = false;
  * Lists audit entries for a specific allergen dictionary entry.
  */
 export const GET: APIRoute = async ({ params, url, locals }) => {
-  const userId = DEFAULT_USER_ID;
-  if (!userId || userId === '00000000-0000-0000-0000-000000000000') {
-    return new Response(
-      JSON.stringify({
-        error: { code: 'INTERNAL', message: 'Missing DEFAULT_USER_ID' },
-      } as ApiError),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
-    );
-  }
+  const userId = locals.user?.id ?? null;
 
   const id = params.id;
   if (!id) {

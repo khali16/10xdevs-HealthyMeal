@@ -1,10 +1,5 @@
 import type { APIRoute } from 'astro'
 import type { SupabaseClient } from '@/db/supabase.client'
-import {
-  DEFAULT_USER_ID,
-  getSupabaseServiceRoleClient,
-  supabaseClient,
-} from '@/db/supabase.client'
 import { userPreferencesCommandSchema } from '@/lib/validation/user-preferences'
 import {
   create,
@@ -18,8 +13,8 @@ export const prerender = false
 const jsonHeaders = { 'Content-Type': 'application/json' }
 
 /**
- * Resolves user ID from Bearer token or uses DEFAULT_USER_ID.
- * Returns a Response on auth failure or missing default ID.
+ * Resolves user ID from Bearer token or cookies.
+ * Returns a Response on auth failure.
  */
 async function resolveUser(
   request: Request,
@@ -28,7 +23,7 @@ async function resolveUser(
   const authHeader = request.headers.get('Authorization')
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.substring(7)
-    const { data, error } = await supabaseClient.auth.getUser(token)
+    const { data, error } = await supabase.auth.getUser(token)
     if (error || !data.user?.id) {
       return new Response(
         JSON.stringify({
@@ -40,16 +35,17 @@ async function resolveUser(
     return { userId: data.user.id, supabase }
   }
 
-  if (!DEFAULT_USER_ID || DEFAULT_USER_ID === '00000000-0000-0000-0000-000000000000') {
+  const { data, error } = await supabase.auth.getUser()
+  if (error || !data.user?.id) {
     return new Response(
       JSON.stringify({
-        error: { code: 'INTERNAL', message: 'Missing DEFAULT_USER_ID' },
+        error: { code: 'UNAUTHORIZED', message: 'Unauthorized' },
       } as ApiError),
-      { status: 500, headers: jsonHeaders },
+      { status: 401, headers: jsonHeaders },
     )
   }
 
-  return { userId: DEFAULT_USER_ID, supabase: getSupabaseServiceRoleClient() }
+  return { userId: data.user.id, supabase }
 }
 
 /**

@@ -1,14 +1,14 @@
 import type { APIRoute } from 'astro'
 import { listAllergens } from '@/lib/services/allergens.service'
 import { listAllergensQuerySchema } from '@/lib/validation/allergens'
-import { getSupabaseServiceRoleClient } from '@/db/supabase.client'
+import { createSupabaseServerInstance } from '@/db/supabase.client'
 import type { ApiError, ApiListMeta } from '@/types'
 
 export const prerender = false
 
 const jsonHeaders = { 'Content-Type': 'application/json' }
 
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, cookies, locals }) => {
   const url = new URL(request.url)
   const queryParams = Object.fromEntries(url.searchParams.entries())
   const parsed = listAllergensQuerySchema.safeParse(queryParams)
@@ -27,8 +27,15 @@ export const GET: APIRoute = async ({ request }) => {
   }
 
   try {
+    const supabase =
+      locals.supabase ??
+      createSupabaseServerInstance({
+        headers: request.headers,
+        cookies,
+      })
+
     const { items, total } = await listAllergens(
-      getSupabaseServiceRoleClient(),
+      supabase,
       {
         is_active: parsed.data.is_active,
         q: parsed.data.q,
