@@ -106,7 +106,7 @@ Notes:
 
 ### License
 
-TBD. This repository does not currently specify a license. Add a `LICENSE` file to define usage terms.
+MIT. See `LICENSE`.
 
 # 10x Astro Starter
 
@@ -207,7 +207,3 @@ The `.windsurfrules` file contains AI configuration for Windsurf.
 ## Contributing
 
 Please follow the AI guidelines and coding practices defined in the AI configuration files when contributing to this project.
-
-## License
-
-MIT

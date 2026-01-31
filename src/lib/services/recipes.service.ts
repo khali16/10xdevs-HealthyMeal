@@ -347,6 +347,35 @@ export async function patchRecipe(
   return getRecipeById(supabase, userId, id)
 }
 
+export async function deleteRecipe(
+  supabase: SupabaseClient,
+  userId: string,
+  id: string,
+): Promise<boolean> {
+  const { data: existing, error: existingError } = await supabase
+    .from('recipes')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('id', id)
+    .is('deleted_at', null)
+    .maybeSingle()
+
+  if (existingError) throw mapDbError(existingError)
+  if (!existing) return false
+
+  const now = new Date().toISOString()
+  const { error: updateError } = await supabase
+    .from('recipes')
+    .update({ deleted_at: now, updated_at: now })
+    .eq('user_id', userId)
+    .eq('id', id)
+    .is('deleted_at', null)
+
+  if (updateError) throw mapDbError(updateError)
+
+  return true
+}
+
 export async function startAIAdjustment(
   supabase: SupabaseClient,
   userId: string,

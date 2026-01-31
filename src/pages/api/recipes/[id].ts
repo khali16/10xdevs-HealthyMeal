@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro'
-import { getRecipeById, patchRecipe } from '@/lib/services/recipes.service'
+import { deleteRecipe, getRecipeById, patchRecipe } from '@/lib/services/recipes.service'
 import { supabaseClient } from '@/db/supabase.client'
 import { patchRecipeCommandSchema } from '@/lib/validation/recipes'
 import type { ApiError } from '@/types'
@@ -157,6 +157,61 @@ export const PATCH: APIRoute = async ({ params, locals, request }) => {
     })
   } catch (e) {
     console.error('Patch recipe failed', { error: e, userId, recipeId: id, operation: 'PATCH' })
+    return new Response(
+      JSON.stringify({ error: { code: 'INTERNAL', message: 'Internal Server Error' } } as ApiError),
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
+    )
+  }
+}
+
+export const DELETE: APIRoute = async ({ params, locals, request }) => {
+  const id = params.id
+  if (!id) {
+    return new Response(
+      JSON.stringify({ error: { code: 'BAD_REQUEST', message: 'Missing id' } } as ApiError),
+      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    )
+  }
+
+  // Try to get authenticated user from JWT token
+  let supabase = locals.supabase
+  let userId: string | null = locals.user?.id ?? null
+
+  const authHeader = request.headers.get('Authorization')
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7)
+    const { data: { user }, error } = await supabaseClient.auth.getUser(token)
+
+    if (!error && user) {
+      userId = user.id
+      supabase = supabaseClient
+    } else {
+      return new Response(
+        JSON.stringify({ error: { code: 'UNAUTHORIZED', message: 'Invalid or expired token' } }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } },
+      )
+    }
+  }
+
+  if (!userId) {
+    return new Response(
+      JSON.stringify({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } } as ApiError),
+      { status: 401, headers: { 'Content-Type': 'application/json' } },
+    )
+  }
+
+  try {
+    const deleted = await deleteRecipe(supabase, userId, id)
+    if (!deleted) {
+      return new Response(
+        JSON.stringify({ error: { code: 'NOT_FOUND', message: 'Recipe not found' } } as ApiError),
+        { status: 404, headers: { 'Content-Type': 'application/json' } },
+      )
+    }
+
+    return new Response(null, { status: 204 })
+  } catch (e) {
+    console.error('Delete recipe failed', { error: e, userId, recipeId: id, operation: 'DELETE' })
     return new Response(
       JSON.stringify({ error: { code: 'INTERNAL', message: 'Internal Server Error' } } as ApiError),
       { status: 500, headers: { 'Content-Type': 'application/json' } },

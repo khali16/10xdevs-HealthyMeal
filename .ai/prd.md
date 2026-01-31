@@ -2,7 +2,7 @@
 
 ## 1. Przegląd produktu
 
-HealthyMeal to responsywna aplikacja web wspierająca użytkowników w dostosowywaniu przepisów kulinarnych do indywidualnych potrzeb żywieniowych z pomocą AI. Produkt adresuje trzy kluczowe persony, w kolejności priorytetu: diety eliminacyjne, sportowcy oraz początkujący kucharze. MVP skupia się na prostym CRUD przepisów tekstowych, profilu preferencji żywieniowych oraz pojedynczej akcji AI „Dostosuj przepis” z podglądem różnic i walidacją bezpieczeństwa żywieniowego.
+HealthyMeal to responsywna aplikacja web wspierająca użytkowników w dostosowywaniu przepisów kulinarnych do indywidualnych potrzeb żywieniowych z pomocą AI. Produkt adresuje trzy kluczowe persony, w kolejności priorytetu: diety eliminacyjne, sportowcy oraz początkujący kucharze. MVP skupia się na prostym CRUD przepisów tekstowych, profilu preferencji żywieniowych oraz pojedynczej akcji AI „Dostosuj przepis” z walidacją bezpieczeństwa żywieniowego.
 
 Platforma: nowoczesna responsywna aplikacja web, przeglądarki wspierane: Chrome, Safari, Edge.
 Prywatność i bezpieczeństwo: wszystkie przepisy są prywatne; minimalizacja PII; szyfrowanie w tranzycie i spoczynku; sekrety w KMS; retencja danych 12 miesięcy z trwałym usunięciem.
@@ -34,9 +34,9 @@ HealthyMeal rozwiązuje te problemy poprzez:
 
 - Wymagane pola profilu: alergeny (lista 14 UE), lista wykluczeń, dieta.
 - Opcjonalne pola: docelowe kalorie/porcje.
-- Onboarding do 60 sekund z „soft gate” do akcji AI, jeśli profil niekompletny.
-- Po rejestracji/pierwszym logowaniu użytkownik widzi modal z pytaniem, czy chce zasilić swoje konto przykładowymi/polecanymi przepisami (dodanymi jako prywatne kopie do jego konta).
-- Użytkownik może odrzucić import („Nie teraz”) i nie powinien widzieć modala ponownie; powinna istnieć możliwość uruchomienia importu później z poziomu UI (np. ustawienia).
+- Onboarding do 60 sekund z „soft gate” do akcji AI, jeśli profil niekompletny. (Poza MVP — do zrobienia później)
+- Po rejestracji/pierwszym logowaniu użytkownik widzi modal z pytaniem, czy chce zasilić swoje konto przykładowymi/polecanymi przepisami (dodanymi jako prywatne kopie do jego konta). (Poza MVP — do zrobienia później)
+- Użytkownik może odrzucić import („Nie teraz”) i nie powinien widzieć modala ponownie; powinna istnieć możliwość uruchomienia importu później z poziomu UI (np. ustawienia). (Poza MVP — do zrobienia później)
 
   3.3 Przepisy (CRUD)
 
@@ -48,7 +48,7 @@ HealthyMeal rozwiązuje te problemy poprzez:
   3.4 Akcja AI „Dostosuj przepis”
 
 - Pojedyncza akcja AI z parametrami: alergeny, wykluczenia, cele makro/kalorie.
-- Podgląd różnic między wersją oryginalną i dostosowaną; wyraźny disclaimer prawny i UX.
+- Podgląd różnic między wersją oryginalną i dostosowaną; wyraźny disclaimer prawny i UX. (Poza MVP — do zrobienia później)
 - Walidacja po-AI: kontrola 14 alergenów UE, obsługa synonimów i składników złożonych; „soft block” i wskazanie niepewności.
 - Błędy/limity: statusy timeout, limit-exceeded, invalid-json, validation-fail; 2–3 próby ponowienia z backoff; limit 10 dostosowań/dzień/użytkownik; reset o północy w strefie użytkownika; timeout 15–20 s.
 - Brak autosave szkicu; ostrzeżenie o wyjściu tylko przy stanie „dirty” (router guard + beforeunload modal).
@@ -76,19 +76,19 @@ HealthyMeal rozwiązuje te problemy poprzez:
 - Toggle „Ulubione”.
 - Uwzględnienie w sortowaniu zgodnie z 3.3.
 
-  3.9 Panel administratora: słownik alergenów i synonimów
+  3.9 Panel administratora: słownik alergenów i synonimów (Poza MVP)
 
 - Konfiguracja słowników w bazie; ekran admin dostępny wyłącznie dla roli „admin” oraz przez feature flagę.
 - Audyt zmian: log {kto, kiedy, co}.
 
-  3.10 Analityka i metryki
+  3.10 Analityka i metryki (Poza MVP)
 
 - Dedykowana tabela logów.
 - Minimalne pola: userId, recipeId oraz action/status/timestamp.
 - Eventy AI: AIAdjustRequested, AIAdjustSucceeded/Failed (status: timeout, limit-exceeded, invalid-json, validation-fail).
 - Event profilowy: ProfileCompleted.
 
-  3.11 Cache/PWA i wydajność
+  3.11 Cache/PWA i wydajność (Poza MVP)
 
 - Cache odpowiedzi API na kliencie (store/PWA).
 - Sanity-testy w Safari i Edge.
@@ -104,16 +104,20 @@ HealthyMeal rozwiązuje te problemy poprzez:
 
 W zakresie MVP
 
-- Konta i profil preferencji z onboardingiem do 60 s i soft gate.
+- Konta i profil preferencji.
 - CRUD przepisów tekstowych, prywatność per użytkownik.
-- Jedna akcja AI „Dostosuj przepis” z podglądem różnic i walidacją.
+- Jedna akcja AI „Dostosuj przepis”.
 - Krok „Zestrukturyzuj” z confidence i normalizacją jednostek.
 - Szybkie filtry i presety; oceny i „Ulubione”; przelicznik porcji.
-- Panel admin słownika alergenów (rola + feature flaga) i audyt.
-- Cache/PWA, analityka minimalna, bezpieczeństwo i retencja.
+- Bezpieczeństwo i retencja.
 
 Poza zakresem MVP
 
+- Onboarding „soft gate” oraz import przykładowych/polecanych przepisów po rejestracji.
+- Podgląd różnic (diff) dla akcji AI.
+- Panel administratora: słownik alergenów i synonimów + audyt zmian.
+- Analityka i metryki (dedykowana tabela logów, eventy AI i profilowe).
+- Cache/PWA i wydajność (cache odpowiedzi API na kliencie; sanity-testy w Safari i Edge).
 - Import przepisów z URL.
 - Rozszerzona obsługa multimediów (zdjęcia, wideo).
 - Udostępnianie przepisów, funkcje społecznościowe.
